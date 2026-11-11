@@ -22,16 +22,6 @@ for builds and [verification](VERIFICATION.md) for executable checks and their l
    [`VrTogglerManager`](../NOVR/VrTogglers/VrTogglerManager.cs).
    [`XrPluginOpenXrToggler`](../NOVR/VrTogglers/XrPluginOpenXrToggler.cs) registers
    controller profiles and selects multipass before loader initialization.
-   [`OpaqueHeadsetImage`](../NOVR/Compatibility/OpaqueHeadsetImage.cs) asks the
-   OpenXR plugin for an opaque scene layer before that start and, where
-   [`HeadsetImagePolicy`](../NOVR/Compatibility/HeadsetImagePolicy.cs) requires it,
-   rewrites eye-texture alpha after each frame. It never changes a camera.
-   [`EyeTextureWatch`](../NOVR/Compatibility/EyeTextureWatch.cs) passes the
-   `Eye Texture Retry` setting to
-   [`NovrEyeTextureRequests`](../NOVR.XR.OpenXR/Compatibility/NovrEyeTextureRequests.cs),
-   which the loader places between the OpenXR plugin and the runtime for
-   `xrCreateSwapchain` alone. It reports and retries a refused eye texture
-   request and never changes an accepted one.
 4. [`VrCameraManager`](../NOVR/VrCamera/VrCameraManager.cs) discovers scene cameras
    and owns their tracked replacements. [`APIBus`](../NOVR/APIBus.cs) publishes
    camera changes; [`NOUIManager`](../NOVR/VrUi/NOUIManager.cs) attaches VR UI as

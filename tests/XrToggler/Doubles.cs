@@ -113,17 +113,15 @@ namespace UnityEngine.XR.OpenXR
         }
         public static readonly OpenXRSettings Instance = new();
         public RenderMode renderMode;
-        public bool ProfilesEnabled, EyeTextureRequestsEnabled;
+        public bool ProfilesEnabled;
         public void EnableNovrControllerProfiles() => ProfilesEnabled = true;
-        public void EnableNovrEyeTextureRequests() => EyeTextureRequestsEnabled = true;
     }
     public class OpenXRLoader : Management.XRLoader
     {
         public override bool Initialize()
         {
-            if (!OpenXRSettings.Instance.ProfilesEnabled || !OpenXRSettings.Instance.EyeTextureRequestsEnabled ||
-                OpenXRSettings.Instance.renderMode != OpenXRSettings.RenderMode.MultiPass)
-                throw new Exception("NOVR stereo, controller profiles and eye texture requests must be configured before loader initialization");
+            if (!OpenXRSettings.Instance.ProfilesEnabled || OpenXRSettings.Instance.renderMode != OpenXRSettings.RenderMode.MultiPass)
+                throw new Exception("NOVR stereo and controller profiles must be configured before loader initialization");
             return base.Initialize();
         }
     }

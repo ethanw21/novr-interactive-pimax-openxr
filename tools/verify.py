@@ -29,8 +29,6 @@ PORTABLE = (
     ("api-lifecycle", "tests/ApiBus/ApiBusChecks.csproj"),
     ("configuration-lifecycle", "tests/ModConfiguration/ModConfigurationChecks.csproj"),
     ("xr-toggle-lifecycle", "tests/XrToggler/XrTogglerChecks.csproj"),
-    ("headset-image", "tests/HeadsetImage/HeadsetImageChecks.csproj"),
-    ("eye-texture", "tests/EyeTexture/EyeTextureChecks.csproj"),
     ("camera-manager", "tests/CameraManager/CameraManagerChecks.csproj"),
     ("spectator-input", "tests/SpectatorView/SpectatorViewChecks.csproj"),
     ("cockpit-profiles", "tests/CockpitProfile/CockpitProfileChecks.csproj"),

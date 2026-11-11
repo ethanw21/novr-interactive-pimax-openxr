@@ -12,8 +12,6 @@ public class ModConfiguration
 
     public readonly ConfigFile Config;
     internal readonly ConfigEntry<bool> DisableProtonXInput;
-    internal readonly ConfigEntry<Compatibility.HeadsetImageOpacity> HeadsetImageOpacity;
-    internal readonly ConfigEntry<Compatibility.EyeTextureRetry> EyeTextureRetry;
     internal readonly Rendering.FixedFoveationSettings FixedFoveation;
     public readonly MotionControls.MotionControlSettings MotionControls;
     public readonly ConfigEntry<float> TargetDesignatorOvershoot;
@@ -38,10 +36,6 @@ public class ModConfiguration
         Config = config ?? throw new ArgumentNullException(nameof(config));
         DisableProtonXInput = config.Bind("Compatibility", "Disable Legacy XInput on Proton", true,
             "Avoid a Proton XInput controller-polling deadlock. Applies only under Wine/Proton and requires a restart. OpenXR motion controls are unaffected. Xbox-style gamepads may need alternate bindings; disable this option if legacy XInput is required.");
-        HeadsetImageOpacity = config.Bind("Compatibility", "Headset Image Opacity", Compatibility.HeadsetImageOpacity.Automatic,
-            "Automatic submits the VR image as an opaque layer and, on Pimax OpenXR, also rewrites its unused alpha channel. This fixes a completely grey headset view on runtimes that treat that channel as transparency; SteamVR already ignores it. Always rewrites alpha on every OpenXR runtime: try it if another runtime shows a grey or washed-out view. Off restores the OpenXR plugin's alpha-blended default. Applies immediately. The desktop view and headset resolution are unaffected.");
-        EyeTextureRetry = config.Bind("Compatibility", "Eye Texture Retry", Compatibility.EyeTextureRetry.Automatic,
-            "Automatic watches the eye texture request on Pimax OpenXR. If the runtime refuses it, which leaves a completely grey headset view, NOVR logs the full request, retries it without its optional parts and logs which sizes and formats the runtime does accept. Always does this on every OpenXR runtime. Off leaves the request to the OpenXR plugin alone. Applies the next time VR starts. Image sizes and formats are never changed.");
         FixedFoveation = new Rendering.FixedFoveationSettings(config);
         MotionControls = new MotionControls.MotionControlSettings(config);
         ControllerBindings = new MotionControls.ControllerBindings(config);

@@ -56,61 +56,6 @@ errors. BepInEx's official [installation guide](https://docs.bepinex.dev/article
 and [Proton/Wine guide](https://docs.bepinex.dev/articles/advanced/proton_wine.html)
 explain the loader setup.
 
-**The headset shows only grey on Pimax OpenXR:** grey is the compositor's own
-backdrop, shown when it has no usable game image. Two causes are handled, and
-the game's `Player.log` (Windows:
-`%USERPROFILE%\AppData\LocalLow\Shockfront\NuclearOption`) tells them apart.
-
-*The runtime refuses the eye textures.* The one log received from a Pimax
-headset so far repeats this every frame, and no image ever reaches the headset:
-
-```text
-[XR] … xrCreateSwapchain: XR_ERROR_FEATURE_UNSUPPORTED
-[XR] … Failed to create swapchain, exiting session.
-```
-
-The plugin's request is an ordinary one, and why Pimax's runtime refuses it is
-not known yet. On a runtime whose name contains "Pimax", NOVR therefore watches
-that request. A refused request is logged in full, retried without its optional
-parts (extension data, creation flags, the sampling usage that only the desktop
-mirror needs) and, if still refused, examined once with throwaway requests so
-the log names the sizes and formats the runtime does accept:
-
-```text
-[NOVR] Eye texture requests: watching on Pimax OpenXR.
-[NOVR] Eye texture request refused, XR_ERROR_FEATURE_UNSUPPORTED: 4312x5104 format 29, usage 0x21, …
-[NOVR] Eye texture retry, …: XR_SUCCESS.
-[NOVR] Eye texture probe, 1024x1024 format 29: …
-```
-
-NOVR never changes a size, a format or a layer count behind the plugin's back.
-After five seconds in VR without eye textures it also writes the OpenXR plugin's
-own report, which lists the runtime, installed API layers, extensions, formats
-and view sizes. Share `Player.log` with those lines. `Eye Texture Retry` under
-`[Compatibility]` in `BepInEx/config/deltawing.novr.cfg` accepts `Automatic`,
-`Always` (every runtime) and `Off`; it applies the next time VR starts.
-
-*The image arrives but is treated as transparent.* The bundled OpenXR plugin
-submits the game image as an alpha-blended layer, but the game never authors
-that alpha channel. SteamVR ignores it. A compositor that honors it can show its
-backdrop instead of the game. NOVR requests an opaque layer on every runtime
-and, when the runtime's name contains "Pimax", also sets the alpha of the eye
-textures to one after each frame. The desktop view, headset resolution and game
-cameras are unchanged. This only matters once eye textures exist:
-
-```text
-[NOVR] Headset image: runtime=…; mode=Automatic; opaque layer=requested; alpha rewrite=on.
-[NOVR] Headset image alpha rewrite: 2 eye image(s) in 2 pass(es), …
-```
-
-`Headset Image Opacity` under `[Compatibility]` accepts `Automatic`, `Always`
-(rewrite alpha on any runtime; try it if another runtime shows a grey or
-washed-out view) and `Off` (the plugin's alpha-blended default). It applies
-immediately.
-
-Both paths have source checks only. Neither has been confirmed on Pimax
-hardware.
-
 ## Tuning performance
 
 The desktop mirror and headset render resolution are separate. The mirror copies
