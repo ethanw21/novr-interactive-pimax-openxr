@@ -1,0 +1,102 @@
+name: Build mod
+
+# Builds the installable package for every pushed commit, which also covers
+# this repository's own pull requests. Start it by hand from the Actions tab
+# with "Run workflow".
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-mod-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  package:
+    name: Package
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DOTNET_CLI_TELEMETRY_OPTOUT: '1'
+      DOTNET_NOLOGO: '1'
+      # Nuclear Option Dedicated Server. Steam serves it without an account.
+      # Its managed assemblies are compile-time references only: they are
+      # never committed, cached or uploaded.
+      SERVER_APP_ID: '3930080'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6
+        with:
+          dotnet-version: '10.0.x'
+      - name: Download reference assemblies
+        run: |
+          set -euo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends lib32gcc-s1
+          steam="$RUNNER_TEMP/steamcmd"
+          server="$RUNNER_TEMP/server"
+          game="$RUNNER_TEMP/game"
+          mkdir -p "$steam" "$server" "$game/NuclearOption_Data/Managed"
+          curl -fsSL --retry 3 https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz |
+            tar -xz -C "$steam"
+          # The server is published for Windows, like the game the mod loads into.
+          assembly=
+          for attempt in 1 2 3; do
+            if "$steam/steamcmd.sh" +@sSteamCmdForcePlatformType windows +force_install_dir "$server" \
+                +login anonymous +app_update "$SERVER_APP_ID" validate +quit; then
+              assembly=$(find "$server" -path '*_Data/Managed/Assembly-CSharp.dll' -print -quit)
+              [ -n "$assembly" ] && break
+            fi
+            echo "SteamCMD attempt $attempt did not install the server."
+          done
+          if [ -z "$assembly" ]; then
+            echo "::error::Steam did not provide the Nuclear Option Dedicated Server assemblies."
+            exit 1
+          fi
+          managed=$(dirname "$assembly")
+          # The build expects a game folder; give it the assemblies and nothing else.
+          cp "$managed"/*.dll "$game/NuclearOption_Data/Managed/"
+          build=$(sed -n 's/.*"buildid"[[:space:]]*"\([0-9]*\)".*/\1/p' "$server"/steamapps/appmanifest_*.acf 2>/dev/null | head -n 1 || true)
+          echo "Reference assemblies: $(ls "$game/NuclearOption_Data/Managed" | wc -l) from server build ${build:-unknown}."
+          echo "NUCLEAR_OPTION_GAME_DIR=$game" >> "$GITHUB_ENV"
+          echo "SERVER_BUILD=${build:-unknown}" >> "$GITHUB_ENV"
+      - name: Build the package
+        run: dotnet build NOVR.Build/NOVR.Build.csproj -c Release -p:DeployToGame=false
+      - name: Check the package
+        id: package
+        run: |
+          set -euo pipefail
+          package="$RUNNER_TEMP/package"
+          mkdir -p "$package"
+          unzip -q dist/NOVR.zip -d "$package"
+          test -s "$package/plugins/NOVR/NOVR.dll"
+          test -s "$package/patchers/NOVR/NOVR.Patcher.dll"
+          # Nothing downloaded from Steam may leave the runner.
+          hashes() { find "$1" -type f -exec sha256sum {} + | cut -d ' ' -f 1 | sort -u; }
+          shared=$(comm -12 <(hashes "$NUCLEAR_OPTION_GAME_DIR") <(hashes "$package") | wc -l)
+          if [ "$shared" -ne 0 ]; then
+            echo "::error::The package contains $shared file(s) from the reference assemblies."
+            exit 1
+          fi
+          version=$(tr -d '[:space:]' < "$package/plugins/NOVR/version.txt")
+          name="NOVR-$version-${GITHUB_SHA::7}"
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          {
+            echo "### NOVR $version"
+            echo
+            echo "Commit \`${GITHUB_SHA::7}\`, compiled against dedicated server build \`$SERVER_BUILD\`."
+            echo
+            echo "Download **$name** from this run's Artifacts and extract its contents into the game's \`BepInEx\` folder."
+            echo "The optional NVIDIA foveation backend is not included."
+          } >> "$GITHUB_STEP_SUMMARY"
+      # Uploaded unpacked, so the download is one archive with the layout of NOVR.zip.
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ runner.temp }}/package/
+          if-no-files-found: error
