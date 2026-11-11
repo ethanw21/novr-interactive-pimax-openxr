@@ -46,6 +46,9 @@ Check(!first.FixedFoveation.UseEyeTracking.Value,
 Check(first.HeadsetImageOpacity.Value == NOVR.Compatibility.HeadsetImageOpacity.Automatic &&
       firstFile.Descriptions.ContainsKey(("Compatibility", "Headset Image Opacity")),
     "New configurations submit an opaque headset image without per-frame work on unaffected runtimes.");
+Check(first.EyeTextureRetry.Value == NOVR.Compatibility.EyeTextureRetry.Automatic &&
+      firstFile.Descriptions.ContainsKey(("Compatibility", "Eye Texture Retry")),
+    "New configurations watch the eye texture request only where a runtime is known to refuse it.");
 Check(first.SeatClearanceEnabled.Value, "Head clearance is enabled by default for new settings.");
 Check(first.SeatClearanceRadius.Value == .25f, "Head clearance starts at a 25 cm radius.");
 var clearanceRange = firstFile.Descriptions[("Comfort", "Head Clearance Radius")].AcceptableValues as AcceptableValueRange<float>;
