@@ -38,6 +38,12 @@ dotnet build NOVR.Build/NOVR.Build.csproj -c Release -p:DeployToGame=false
 For a custom Steam library, pass the same `-p:NuclearOptionGameDir="/path/to/Nuclear Option"`
 to the package command, or set `NUCLEAR_OPTION_GAME_DIR` before building.
 
+GitHub Actions builds the same package without a local game installation. The
+**Build mod** workflow runs for each pushed commit and can be started from the
+Actions tab. Its `NOVR-<version>-<commit>` artifact has the layout of `NOVR.zip`.
+[Verification](docs/VERIFICATION.md#github-actions) explains where its reference
+assemblies come from.
+
 To build all maintained projects with SDK 10:
 
 ```sh

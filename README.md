@@ -85,6 +85,8 @@ dotnet build NOVR.Patcher/NOVR.Patcher.csproj -c Release -p:DeployToGame=false
 
 The full solution needs SDK 10. Building does not install the mod. Optional installer executables require `-p:PublishInstallers=true`.
 
+Without a local game installation, the **Build mod** workflow on GitHub Actions builds the same package for each pushed commit. Download the artifact from the workflow run and install it like `NOVR.zip`.
+
 [Contributing](CONTRIBUTING.md) · [Code architecture](docs/ARCHITECTURE.md) · [Verification](docs/VERIFICATION.md).
 
 ## Credits and license

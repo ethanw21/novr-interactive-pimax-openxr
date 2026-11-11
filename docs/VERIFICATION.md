@@ -90,6 +90,17 @@ without overwriting a previous package.
 It records the installer's child publication commands instead of executing them.
 It never builds or installs the runtime mod or needs game/native binaries.
 
+`.github/workflows/build-mod.yml` is the only workflow that builds the runtime
+mod. It runs for each pushed commit and on manual dispatch. The mod compiles
+against the game's managed assemblies, so the job downloads the Nuclear Option
+Dedicated Server with anonymous SteamCMD and uses its `Managed` assemblies as
+compile-time references. They are never committed, cached or uploaded, and the
+job fails if any of them appears in the package. It then runs the documented
+`NOVR.Build` package command and uploads the unpacked package as one artifact
+named `NOVR-<version>-<commit>`, with the layout of `NOVR.zip`. The optional
+native foveation backend is not built. A passing run shows that the source
+compiles against the server's assemblies. It does not start the game or the mod.
+
 A passing Linux run does not prove Windows passed; both matrix results need to
 be checked in GitHub Actions. Local test output cannot establish that a hosted
 workflow ran successfully.
