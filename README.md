@@ -1,6 +1,6 @@
 # NOVR Interactive
 
-A [Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/) VR mod with virtual HOTAS controls, configurable Steam Frame / Touch bindings and a hand-following native option wheel.
+A [Nuclear Option](https://store.steampowered.com/app/2168680/Nuclear_Option/) VR mod with virtual HOTAS controls, configurable Steam Frame / Touch / Valve Index bindings and a hand-following native option wheel.
 
 **Disclaimer:**
 
@@ -30,21 +30,23 @@ This replaces upstream NOVR; do not install both. The installer does not change 
 
 These buttons assume the flight stick is in your right hand. Left-handed mode moves role-based actions with the stick/throttle, using the corresponding buttons on that controller; the View menu button stays on the physical left. Custom bindings are retained. Edit them under **View → Controller bindings** or **Settings → Controls → Visual VR Controller Bindings**.
 
-| Action | Steam Frame | Quest / Touch | Context |
-| --- | --- | --- | --- |
-| Guns | Right trigger | Right trigger | Stick held |
-| Selected weapon release | A | A | Stick held |
-| Select target nearest cue | Right thumbstick click | Right thumbstick click | Stick held |
-| Unselect latest target | B | B | Stick held |
-| Next weapon | Y | Y | Frame: stick held; Touch: throttle held |
-| Deploy countermeasures | Left D-pad down | X | Throttle held |
-| Next countermeasure type | Left D-pad right | Left thumbstick click | Throttle held |
-| Wheel / air brake | Left trigger | Left trigger | Throttle held |
-| Nozzle tilt / wing sweep / pusher fans | Left thumbstick up/down | Left thumbstick up/down | Throttle or collective held |
-| Map / respawn | B | B | Stick hand free, or spectating; press again to close |
-| VR View menu | Left View | Left Menu, or wheel → VR MENU | Either grip state for button; free hand for wheel |
-| Quick wheel | Either thumbstick click | Either thumbstick click | That hand free |
-| Reopen layout menu | Either thumbstick click | Either thumbstick click | Edit layout active |
+| Action | Steam Frame | Quest / Touch | Valve Index | Context |
+| --- | --- | --- | --- | --- |
+| Guns | Right trigger | Right trigger | Right trigger | Stick held |
+| Selected weapon release | A | A | Right A | Stick held |
+| Select target nearest cue | Right thumbstick click | Right thumbstick click | Right thumbstick click | Stick held |
+| Unselect latest target | B | B | Right B | Stick held |
+| Next weapon | Y | Y | Left B | Frame: stick held; Touch / Index: throttle held |
+| Deploy countermeasures | Left D-pad down | X | Left A | Throttle held |
+| Next countermeasure type | Left D-pad right | Left thumbstick click | Left thumbstick click | Throttle held |
+| Wheel / air brake | Left trigger | Left trigger | Left trigger | Throttle held |
+| Nozzle tilt / wing sweep / pusher fans | Left thumbstick up/down | Left thumbstick up/down | Left thumbstick up/down | Throttle or collective held |
+| Map / respawn | B | B | Right B | Stick hand free, or spectating; press again to close |
+| VR View menu | Left View | Left Menu, or wheel → VR MENU | Left trackpad press, or wheel → VR MENU | Either grip state for button; free hand for wheel |
+| Quick wheel | Either thumbstick click | Either thumbstick click | Either thumbstick click | That hand free |
+| Reopen layout menu | Either thumbstick click | Either thumbstick click | Either thumbstick click | Edit layout active |
+
+Valve Index controllers are detected automatically and use their own preset. Their system buttons belong to the VR runtime, so View opens with a firm press on the left trackpad; with strapped-on controllers, open your hand and close it on a handle to grab it. This preset has not yet been confirmed on real hardware. [Index details](docs/CONTROLLER_BINDINGS.md#valve-index-controllers).
 
 Target selection and cycling act on button release; guns, weapon release, countermeasures and brakes are held actions. A white outline marks a handle within grab range (15 cm by default). Grip grabs it; **View → Flight controls** offers Hold or Toggle for each. **F7:** motion controls. **F8:** place handles. **F9:** View in the cockpit; map outside it.
 
@@ -52,7 +54,7 @@ For a persistent manual Ibis pusher-fan setting, turn Flight Assist off; enabled
 
 **Quick wheel:** deflect to highlight; return to center to select. Click again to cancel. In flight, trigger changes Options / Weapons pages. **GAME MENU** opens the game's menu; **VR MENU** opens NOVR settings, including when Steam Link consumes the Quest Menu button. Eject requires a centered stick-click hold for 1.2 seconds; release to reset, or tilt / press trigger to cancel.
 
-**Outside an aircraft:** thumbstick click opens a wheel with **VR MENU**, **GAME MENU** and **OPEN MAP / CLOSE MAP**, including while dead, waiting to spawn or spectating. **B** also toggles the map on Frame and Quest with the default right-handed layout (left-hand Y on Quest when mirrored). Closing the map returns to the same spectator target.
+**Outside an aircraft:** thumbstick click opens a wheel with **VR MENU**, **GAME MENU** and **OPEN MAP / CLOSE MAP**, including while dead, waiting to spawn or spectating. **B** also toggles the map on Frame, Quest and Index with the default right-handed layout (left-hand Y on Quest, left B on Index, when mirrored). Closing the map returns to the same spectator target.
 
 **Spectating:** a full VR view follows the selected unit from the game’s normal external camera distance. Right stick orbits; left stick up/down moves closer/farther. Center the sticks after menus to resume camera control. The spawn map and aircraft-selection pages keep their normal presentation and controls.
 

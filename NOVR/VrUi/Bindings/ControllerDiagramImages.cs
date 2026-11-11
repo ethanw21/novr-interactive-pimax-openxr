@@ -8,28 +8,37 @@ namespace NOVR.VrUi;
 
 // Both original diagram sheets remain unchanged. UV crops select a physical
 // hand; the supplied black Touch drawing is displayed on a separate light card.
+// The Index sheet is NOVR's own schematic, drawn to the Touch sheet's 800x371
+// size and hand crops so both share one card, scale and placement.
 internal static class ControllerDiagramImages
 {
     private static readonly Dictionary<string, Texture2D?> Textures = new();
-    internal static Vector2 Position(bool frame, bool side) => !frame ? Vector2.zero : side ? new Vector2(82, -89) : new Vector2(-40, 8);
-    internal static Vector2 Size(bool frame, bool side) => !frame ? new Vector2(170, 170f * 371 / 215) :
+    private static bool Frame(ControllerBindingProfile profile) => profile == ControllerBindingProfile.Frame;
+    internal static Vector2 Position(ControllerBindingProfile profile, bool side) => !Frame(profile) ? Vector2.zero : side ? new Vector2(82, -89) : new Vector2(-40, 8);
+    internal static Vector2 Size(ControllerBindingProfile profile, bool side) => !Frame(profile) ? new Vector2(170, 170f * 371 / 215) :
         side ? new Vector2(76, 76f * 241 / 202) : new Vector2(160, 160f * 348 / 202);
-    internal static string File(bool frame, bool left, bool side) => frame ? "frame-views.png" : "touch-diagram.png";
-    internal static Rect Region(bool frame, bool left, bool side)
+    internal static string File(ControllerBindingProfile profile) => profile switch
     {
-        if (!frame)
+        ControllerBindingProfile.Frame => "frame-views.png",
+        ControllerBindingProfile.Index => "index-diagram.png",
+        _ => "touch-diagram.png"
+    };
+    internal static Rect Region(ControllerBindingProfile profile, bool left, bool side)
+    {
+        if (!Frame(profile))
             return new Rect(left ? 0 : 585f / 800, 0, 215f / 800, 1);
         var x = side ? (left ? 122 : 86) : (left ? 1262 : 1272);
         var y = side ? (left ? 1210 : 438) : (left ? 768 : 31);
         var height = side ? 241 : 348;
         return new Rect(x / 2195f, 1 - (y + height) / 1492f, 202 / 2195f, height / 1492f);
     }
-    internal static Vector2 Endpoint(bool frame, bool left, ControllerButton? button)
+    internal static Vector2 Endpoint(ControllerBindingProfile profile, bool left, ControllerButton? button)
     {
+        var frame = Frame(profile);
         var side = frame && (button == ControllerButton.Trigger || button == ControllerButton.Shoulder);
-        var point = frame ? FramePoint(left, button) : TouchPoint(left, button);
-        var size = Size(frame, side);
-        return Position(frame, side) + new Vector2((point.x - .5f) * size.x, (.5f - point.y) * size.y);
+        var point = frame ? FramePoint(left, button) : profile == ControllerBindingProfile.Index ? IndexPoint(left, button) : TouchPoint(left, button);
+        var size = Size(profile, side);
+        return Position(profile, side) + new Vector2((point.x - .5f) * size.x, (.5f - point.y) * size.y);
     }
     private static Vector2 FramePoint(bool left, ControllerButton? button)
     {
@@ -65,9 +74,25 @@ internal static class ControllerDiagramImages
         };
         return new Vector2(point.x / 215, point.y / 371);
     }
-    internal static Texture2D? Get(bool frame, bool left, bool side)
+    private static Vector2 IndexPoint(bool left, ControllerButton? button)
     {
-        var file = File(frame, left, side);
+        // Control centers in the right-hand cell of index-diagram.svg. The left
+        // hand is its mirror image: thumbsticks inboard, A/B outboard.
+        var point = button switch
+        {
+            ControllerButton.Primary => new Vector2(150, 114),
+            ControllerButton.Secondary => new Vector2(148, 80),
+            ControllerButton.StickClick => new Vector2(74, 84),
+            ControllerButton.Trackpad => new Vector2(110, 128),
+            ControllerButton.Menu => new Vector2(78, 136),
+            ControllerButton.Trigger => new Vector2(108, 18),
+            _ => new Vector2(106, 262)
+        };
+        return new Vector2((left ? 215 - point.x : point.x) / 215, point.y / 371);
+    }
+    internal static Texture2D? Get(ControllerBindingProfile profile)
+    {
+        var file = File(profile);
         if (Textures.TryGetValue(file, out var cached))
             return cached;
         Texture2D? texture = null;

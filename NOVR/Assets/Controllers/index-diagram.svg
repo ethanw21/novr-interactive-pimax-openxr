@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="371" viewBox="0 0 800 371">
+  <defs>
+    <!-- Right-hand controller, drawn in a 215 x 371 cell. Original schematic for NOVR Interactive. -->
+    <g id="body" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M 84 36 C 84 14, 90 8, 108 8 C 126 8, 132 14, 132 37"/>
+      <rect x="40" y="34" width="132" height="152" rx="56" ry="60"/>
+      <path d="M 72 180 C 70 240, 78 300, 86 338 C 90 356, 126 356, 130 338 C 136 300, 142 240, 140 180"/>
+      <path d="M 171.7 88 C 216 108, 212 262, 133.5 312.7"/>
+      <path d="M 172 122 C 198 140, 194 244, 136 291"/>
+      <circle cx="74" cy="84" r="18"/>
+      <circle cx="74" cy="84" r="11.5"/>
+      <rect x="97" y="96" width="26" height="64" rx="13"/>
+      <circle cx="148" cy="80" r="12"/>
+      <circle cx="150" cy="114" r="12"/>
+      <circle cx="78" cy="136" r="8"/>
+    </g>
+  </defs>
+  <g transform="translate(215,0) scale(-1,1)"><use href="#body"/></g>
+  <g transform="translate(585,0)"><use href="#body"/></g>
+  <g font-family="DejaVu Sans, Arial, Helvetica, sans-serif" font-weight="700" font-size="15" text-anchor="middle" fill="#000">
+    <text x="67" y="85.5">B</text>
+    <text x="65" y="119.5">A</text>
+    <text x="733" y="85.5">B</text>
+    <text x="735" y="119.5">A</text>
+  </g>
+</svg>

@@ -7,11 +7,26 @@ namespace NOVR.VrUi;
 // These ordered banks keep the original artwork clear and leaders uncrossed.
 internal static class ControllerDiagramLayout
 {
-    internal static Vector2 Position(bool frame, bool left, ControllerButton? button)
+    internal static Vector2 Position(ControllerBindingProfile profile, bool left, ControllerButton? button)
     {
         bool columnLeft;
         float y;
-        if (frame)
+        if (profile == ControllerBindingProfile.Index)
+        {
+            // Index thumbsticks sit inboard, the reverse of Touch.
+            var thumbstickSide = button is ControllerButton.Trigger or ControllerButton.StickClick or ControllerButton.Menu;
+            columnLeft = thumbstickSide ? !left : left;
+            y = button switch
+            {
+                ControllerButton.Trigger => 124,
+                ControllerButton.Secondary => 108,
+                ControllerButton.StickClick => 68,
+                ControllerButton.Primary => 60,
+                ControllerButton.Menu or ControllerButton.Trackpad => 12,
+                _ => -44
+            };
+        }
+        else if (profile == ControllerBindingProfile.Frame)
         {
             columnLeft = left ? button is ControllerButton.Top or ControllerButton.Outside or ControllerButton.Primary :
                 button == null || button is ControllerButton.Menu or ControllerButton.Secondary or ControllerButton.StickClick;

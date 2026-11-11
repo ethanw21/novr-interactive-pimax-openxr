@@ -10,21 +10,28 @@ internal sealed class ControllerBindingBank
     public readonly ConfigEntry<ControllerButton> Fire, WeaponRelease, Countermeasures, NextWeapon, SelectTarget, NextCountermeasure, Map, WristMenu, ClearTargets, UnlockTarget, Brake;
     public readonly ConfigEntry<float> PointerResponse;
     public readonly ConfigEntry<bool> SelectTargetOnStick;
-    internal ControllerBindingBank(ConfigFile config, string section, bool touch)
+    // An Index bank starts from the Touch layout: pass touch and index together.
+    internal ControllerBindingBank(ConfigFile config, string section, bool touch, bool index = false)
     {
         PointerEnabled = config.Bind(section, "Controller Pointer", true, "Point at menus and the map with the stick hand; trigger clicks and thumbstick scrolls. Mouse remains available when controllers are untracked.");
         CombatEnabled = config.Bind(section, "Combat Controls", true, "Enable controller weapon and targeting actions while gripping virtual flight controls.");
         PointerResponse = config.Bind(section, "Pointer Response", 24f, new ConfigDescription("Laser aim smoothing. 0 disables smoothing. Higher follows faster.", new AcceptableValueRange<float>(0f, 60f)));
         Fire = config.Bind(section, "Fire - stick hand", ControllerButton.Trigger, "GUNS ONLY. Hold while gripping the virtual stick. Guns remain available with a missile or bomb selected; native safety and readiness still apply.");
         WeaponRelease = config.Bind(section, "Weapon Release - stick hand", ControllerButton.Primary, "A on the right controller: release the selected non-gun weapon while gripping the stick. Touching the button only animates the thumb.");
-        Countermeasures = config.Bind(section, "Countermeasures - throttle hand", ControllerButton.Primary, "Throttle action button: Frame D-pad down or Touch X. Hold while gripping to deploy selected countermeasures.");
-        NextWeapon = config.Bind(section, "Next Weapon - stick hand", touch ? ControllerButton.Secondary : ControllerButton.TopOrSecondary, "Release while gripping the assigned handle to cycle weapons. Frame Y uses the stick; Touch Y uses the throttle by default.");
+        Countermeasures = config.Bind(section, "Countermeasures - throttle hand", ControllerButton.Primary, index ? "Throttle action button: Index A on the throttle hand. Hold while gripping to deploy selected countermeasures."
+            : "Throttle action button: Frame D-pad down or Touch X. Hold while gripping to deploy selected countermeasures.");
+        NextWeapon = config.Bind(section, "Next Weapon - stick hand", touch ? ControllerButton.Secondary : ControllerButton.TopOrSecondary, index ? "Release while gripping the assigned handle to cycle weapons. Index B on the throttle hand by default."
+            : "Release while gripping the assigned handle to cycle weapons. Frame Y uses the stick; Touch Y uses the throttle by default.");
         // Keep the old key so existing custom button assignments survive the hand change.
         SelectTarget = config.Bind(section, "Select Target - throttle hand", ControllerButton.StickClick, "Target-select button. Press and release while gripping the assigned handle to select under the head-directed designator. Change its hand in View > Controller bindings.");
-        NextCountermeasure = config.Bind(section, "Next Countermeasure - throttle hand", touch ? ControllerButton.StickClick : ControllerButton.Secondary, "Frame D-pad right or Touch throttle thumbstick click while holding its handle. Free-hand click keeps the option wheel.");
-        Map = config.Bind(section, "Map - stick hand", ControllerButton.OutsideOrSecondary, "Frame B, or B on Touch-compatible controllers. Opens/closes the tactical map, including after a crash or in spectator view. With a live flight stick held, its target-unselect or weapon-cycle binding takes priority.");
-        WristMenu = config.Bind(section, "Wrist Menu - throttle hand", ControllerButton.Menu, "Frame View, or the Touch left menu button. Opens the wrist panel in the cockpit, or the tactical recovery map outside it. F9 is a keyboard fallback.");
-        ClearTargets = config.Bind(section, "Clear Targets - stick hand", ControllerButton.None, "Use View > Flight actions to clear all targets, or assign a controller button. Frame Y cycles weapons.");
+        NextCountermeasure = config.Bind(section, "Next Countermeasure - throttle hand", touch ? ControllerButton.StickClick : ControllerButton.Secondary, index ? "Index throttle thumbstick click while holding its handle. Free-hand click keeps the option wheel."
+            : "Frame D-pad right or Touch throttle thumbstick click while holding its handle. Free-hand click keeps the option wheel.");
+        Map = config.Bind(section, "Map - stick hand", ControllerButton.OutsideOrSecondary, "Frame B, or B on Touch-compatible and Index controllers. Opens/closes the tactical map, including after a crash or in spectator view. With a live flight stick held, its target-unselect or weapon-cycle binding takes priority.");
+        // Index has no application menu button: both system buttons belong to the runtime.
+        WristMenu = config.Bind(section, "Wrist Menu - throttle hand", index ? ControllerButton.Trackpad : ControllerButton.Menu, index ? "Index left trackpad press. Opens the wrist panel in the cockpit, or the tactical recovery map outside it. The option wheel's VR MENU and F9 are fallbacks."
+            : "Frame View, or the Touch left menu button. Opens the wrist panel in the cockpit, or the tactical recovery map outside it. F9 is a keyboard fallback.");
+        ClearTargets = config.Bind(section, "Clear Targets - stick hand", ControllerButton.None, index ? "Use View > Flight actions to clear all targets, or assign a controller button."
+            : "Use View > Flight actions to clear all targets, or assign a controller button. Frame Y cycles weapons.");
         UnlockTarget = config.Bind(section, "Unlock Last Target - stick hand", touch ? ControllerButton.Secondary : ControllerButton.OutsideOrNone, "B while gripping the stick removes the most recently selected target. With the stick released, B opens the map.");
         var brakeDefault = ControllerButton.Trigger;
         // Do not give a new action a button already used by a custom setup.
@@ -111,6 +118,7 @@ internal sealed class ControllerBindingBank
         ControllerButton.Top => hand.Top ? 1 : 0,
         ControllerButton.Outside => hand.Outside ? 1 : 0,
         ControllerButton.StickClick => hand.StickClick ? 1 : 0,
+        ControllerButton.Trackpad => hand.Trackpad ? 1 : 0,
         _ => 0
     };
 }

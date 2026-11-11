@@ -32,7 +32,7 @@ internal static class ActionChecks
         var serial = 0;
         Fixture Start(ControllerActionId action, bool combat = false, ControllerBindingProfile profile = ControllerBindingProfile.Frame, bool left = false) =>
             new(config("action-" + ++serial), action, combat, profile, left);
-        foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+        foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
             foreach (var left in new[] { false, true })
                 foreach (var enabled in new[] { false, true })
                     foreach (var entry in Actions)
@@ -57,6 +57,35 @@ internal static class ActionChecks
                         check(observed == (!entry.combat || enabled),
                             $"{profile} {(left ? "left" : "right")} {entry.binding}: combat={enabled} preserves its action contract");
                     }
+
+        // An Index trackpad press is an ordinary held-handle button.
+        foreach (var left in new[] { false, true })
+        {
+            var hardware = (TrackedControllers.Left, TrackedControllers.Right);
+            TrackedControllers.Left = TrackedControllers.Right = ControllerHardwareProfile.Index;
+            var f = Start(ControllerActionId.Gear, false, ControllerBindingProfile.Index, left);
+            f.Bindings.Set(ControllerActionId.Gear, new(ControllerButton.Trackpad, ControllerHandRole.Stick));
+            check(f.Bindings.Get(ControllerActionId.Gear).Button == ControllerButton.Trackpad, "Index accepts a trackpad flight binding");
+            // A queued action is due on the frame after its release.
+            f.Tick(false);
+            f.Tick(true);
+            f.Tick(false);
+            f.Tick(false);
+            check(!f.Actions.Queued(NativeControllerAction.Gear), "A face button does not trigger a trackpad binding");
+            f.TickTrackpad(true);
+            f.TickTrackpad(true);
+            check(!f.Actions.Queued(NativeControllerAction.Gear), "Trackpad action waits for release like other buttons");
+            f.TickTrackpad(false);
+            f.TickTrackpad(false);
+            check(f.Actions.Queued(NativeControllerAction.Gear), $"Index {(left ? "left" : "right")} trackpad release queues its action");
+            MotionFlightController.Instance.StickHeld = false;
+            f.TickTrackpad(false);
+            f.TickTrackpad(true);
+            f.TickTrackpad(false);
+            f.TickTrackpad(false);
+            check(!f.Actions.Queued(NativeControllerAction.Gear), "Trackpad flight binding still needs its handle held");
+            (TrackedControllers.Left, TrackedControllers.Right) = hardware;
+        }
 
         foreach (var context in new[] { "grip", "flight", "menu", "wheel", "map", "tracking", "layout" })
         {
@@ -277,6 +306,13 @@ internal static class ActionChecks
             Time.frameCount++;
             TrackedControllers.Samples[0] = TrackedControllers.Samples[1] = new ControllerSample { Valid = Valid, NativeFrame = _frame };
             TrackedControllers.Samples[_left ? 0 : 1].Primary = pressed;
+            Invoke("Update");
+        }
+        internal void TickTrackpad(bool pressed)
+        {
+            Time.frameCount++;
+            TrackedControllers.Samples[0] = TrackedControllers.Samples[1] = new ControllerSample { Valid = Valid, NativeFrame = _frame };
+            TrackedControllers.Samples[_left ? 0 : 1].Trackpad = pressed;
             Invoke("Update");
         }
         internal void TickThrottleClick(bool pressed, bool held)
