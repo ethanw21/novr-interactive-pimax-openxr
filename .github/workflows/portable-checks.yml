@@ -39,6 +39,7 @@ jobs:
             /NOVR.Installer/Models/
             /NOVR.Installer/Services/
             /NOVR.Installer/ViewModels/
+            /NOVR.XR.OpenXR/Compatibility/NovrEyeTextureRequests.cs
             /NOVR.XR.OpenXR/Settings/NovrControllerProfiles.cs
             /NOVR.XR.OpenXR/input/NovrEyeGaze.cs
             /NOVR.Patcher/PayloadFile.cs
