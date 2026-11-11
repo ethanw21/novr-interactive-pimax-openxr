@@ -50,6 +50,7 @@ public class Core : MonoBehaviour
         gameObject.AddComponent<MotionControls.PcVrCapabilities>();
         // Enabled here, before Start launches OpenXR.
         gameObject.AddComponent<Compatibility.OpaqueHeadsetImage>();
+        gameObject.AddComponent<Compatibility.EyeTextureWatch>();
         gameObject.AddComponent<Rendering.FixedFoveationRuntime>();
         gameObject.AddComponent<VrUi.WristMenu>();
     }
