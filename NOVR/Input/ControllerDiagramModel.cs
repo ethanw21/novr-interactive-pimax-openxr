@@ -65,6 +65,8 @@ internal static class ControllerDiagramModel
                 ControllerButton.Outside => "D-pad ←",
                 _ => ControllerButtonNames.Describe(button, left, frame)
             };
-        return ControllerButtonNames.Describe(button, left, frame);
+        if (profile == ControllerBindingProfile.Index && button == ControllerButton.Trackpad)
+            return "Trackpad";
+        return ControllerBindingDefaults.ButtonLabel(profile, left, button);
     }
 }

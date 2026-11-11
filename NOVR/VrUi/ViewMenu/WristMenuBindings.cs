@@ -19,7 +19,7 @@ internal sealed partial class WristMenu
     private static string DescribeBinding(ControllerActionBinding binding)
     {
         var left = ControllerBindings.ResolveLeft(binding.Hand, StickLeft);
-        var text = ControllerButtonNames.Describe(binding.Button, left, Bindings.ButtonProfile(left) == ControllerBindingProfile.Frame);
+        var text = ControllerBindingDefaults.ButtonLabel(Bindings.ButtonProfile(left), left, binding.Button);
         return binding.Button == ControllerButton.None ? "Unassigned" : (left ? "L · " : "R · ") + text;
     }
 
@@ -40,7 +40,7 @@ internal sealed partial class WristMenu
                 break;
             }
             text += ControllerBindings.ActionLabel(action) + ": " +
-                ControllerButtonNames.Describe(binding.Button, left, Bindings.ButtonProfile(left) == ControllerBindingProfile.Frame) + "\n\n";
+                ControllerBindingDefaults.ButtonLabel(Bindings.ButtonProfile(left), left, binding.Button) + "\n\n";
         }
         return text.TrimEnd();
     }

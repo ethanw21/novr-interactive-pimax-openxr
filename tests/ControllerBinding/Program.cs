@@ -7,7 +7,7 @@ Directory.CreateDirectory(directory);
 const string frameSection = "VR Controller Bindings";
 try
 {
-    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
         foreach (var leftHanded in new[] { false, true })
         {
             Hardware(profile);
@@ -35,7 +35,7 @@ try
             True(bindings.GetConflicts(ControllerActionId.Guns, release, leftHanded).Contains(ControllerActionId.WeaponRelease), "Guns and release conflict on same input");
         }
 
-    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
         foreach (var left in new[] { false, true })
         {
             True(!ControllerBindings.IsBindingAvailable(profile, left, ControllerActionId.Map, ControllerButton.Trigger), "Pointer trigger reserved in map");
@@ -55,6 +55,28 @@ try
     Equal(ControllerButtonNames.Describe(ControllerButton.TopOrSecondary, true, false), "Y", "Touch Y name");
     Equal(ControllerButtonNames.Describe(ControllerButton.TopOrSecondary, false, true), "Y", "Frame Y name");
     Equal(ControllerButtonNames.Describe(ControllerButton.OutsideOrNone, false, true), "B", "Frame B name");
+
+    // Index: A/B on both hands, a trackpad in place of a menu button, and
+    // system buttons that stay with the runtime on either hand.
+    foreach (var left in new[] { false, true })
+    {
+        foreach (var button in new[] { ControllerButton.Top, ControllerButton.Outside, ControllerButton.Shoulder, ControllerButton.Menu })
+            True(!ControllerBindings.IsButtonAvailable(ControllerBindingProfile.Index, left, button), "Index has no " + button);
+        True(ControllerBindings.IsButtonAvailable(ControllerBindingProfile.Index, left, ControllerButton.Trackpad), "Index trackpad is a button on either hand");
+        True(!ControllerBindings.IsButtonAvailable(ControllerBindingProfile.Touch, left, ControllerButton.Trackpad) &&
+            !ControllerBindings.IsButtonAvailable(ControllerBindingProfile.Frame, left, ControllerButton.Trackpad), "Only Index has a trackpad");
+        True(ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.WristMenu, ControllerButton.Trackpad) &&
+            ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.Map, ControllerButton.Trackpad), "Trackpad may open View or the map");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.Primary), "A", "Index A on both hands");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.OutsideOrSecondary), "B", "Index B on both hands");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.Trackpad), "Trackpad press", "Index trackpad name");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.Menu), "Unavailable (system button)", "Index system button is not offered");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Touch, left, ControllerButton.Trackpad), "Unavailable", "Touch has no trackpad name");
+    }
+    Equal(ControllerBindingDefaults.Get(ControllerBindingProfile.Index, ControllerActionId.WristMenu).Button, ControllerButton.Trackpad, "Index View defaults to the trackpad");
+    Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Touch, true, ControllerButton.Primary), "X", "Touch left keeps X");
+    Equal(ControllerBindings.Read(new ControllerSample { Trackpad = true }, ControllerButton.Trackpad), 1f, "Trackpad press reads as a held button");
+    Equal(ControllerBindings.Read(new ControllerSample { Menu = true, Primary = true }, ControllerButton.Trackpad), 0f, "Other buttons never read as the trackpad");
 
     // Exercise real BepInEx config entries, persistence and migration, not mocked binds.
     Hardware(ControllerBindingProfile.Frame);
@@ -114,6 +136,46 @@ try
     TrackedControllers.Right = ControllerHardwareProfile.Other;
     Equal(unknown.EffectiveProfile, ControllerBindingProfile.Touch, "Known generic controller uses Touch fallback");
 
+    // Index is detected on its own, keeps a separate saved bank, and survives a disconnect.
+    Hardware(ControllerBindingProfile.Index);
+    ModConfiguration.Instance.MotionControls.LeftHanded.Value = false;
+    var indexConfig = Config("index-bank");
+    var index = new ControllerBindings(indexConfig);
+    Equal(index.EffectiveProfile, ControllerBindingProfile.Index, "Auto selects Index");
+    Equal(index.ButtonProfile(true), ControllerBindingProfile.Index, "Index hardware offers Index buttons");
+    Equal(index.Get(ControllerActionId.WristMenu), new ControllerActionBinding(ControllerButton.Trackpad, ControllerHandRole.Left), "Index View is the physical left trackpad");
+    index.Set(ControllerActionId.Gear, new(ControllerButton.Trackpad, ControllerHandRole.Right));
+    Equal(index.Get(ControllerActionId.Gear).Button, ControllerButton.Trackpad, "Index trackpad binding stored");
+    index.Set(ControllerActionId.Radar, new(ControllerButton.Menu, ControllerHandRole.Left));
+    Equal(index.Get(ControllerActionId.Radar).Button, ControllerButton.None, "Set rejects the Index system button");
+    index.Set(ControllerActionId.WristMenu, new(ControllerButton.StickClick, ControllerHandRole.Left));
+    Equal(index.Get(ControllerActionId.WristMenu).Button, ControllerButton.Trackpad, "Free stick click stays reserved for the wheel on Index");
+    Hardware(ControllerBindingProfile.Touch);
+    Equal(index.Get(ControllerActionId.Gear).Button, ControllerButton.None, "Touch bank is untouched by Index edits");
+    Equal(index.Get(ControllerActionId.WristMenu).Button, ControllerButton.Menu, "Touch keeps its menu button");
+    index.Set(ControllerActionId.Gear, new(ControllerButton.Trackpad, ControllerHandRole.Right));
+    Equal(index.Get(ControllerActionId.Gear).Button, ControllerButton.None, "Touch hardware cannot take a trackpad binding");
+    Hardware(ControllerBindingProfile.Frame);
+    Equal(index.Get(ControllerActionId.WristMenu).Button, ControllerButton.Menu, "Frame keeps its View button");
+    Hardware(ControllerBindingProfile.Index);
+    revision = index.ChangeVersion;
+    TrackedControllers.Left = TrackedControllers.Right = ControllerHardwareProfile.Unknown;
+    Equal(index.EffectiveProfile, ControllerBindingProfile.Index, "Disconnect retains the Index profile");
+    Equal(index.ChangeVersion, revision, "Index disconnect does not reset input gates");
+    TrackedControllers.Left = ControllerHardwareProfile.Index;
+    TrackedControllers.Right = ControllerHardwareProfile.Unknown;
+    Equal(index.EffectiveProfile, ControllerBindingProfile.Index, "One tracked Index controller is enough");
+    indexConfig.Save();
+    Hardware(ControllerBindingProfile.Index);
+    var indexRestored = new ControllerBindings(new ConfigFile(indexConfig.ConfigFilePath, false) { SaveOnConfigSet = false });
+    Equal(indexRestored.Get(ControllerActionId.Gear), new ControllerActionBinding(ControllerButton.Trackpad, ControllerHandRole.Right), "Index customization survives reload");
+    Equal(TrackedControllers.TrackpadPressForce, TrackedControllers.DefaultTrackpadPressForce, "Trackpad press force starts at its default");
+    indexRestored.TrackpadPressForce.Value = .25f;
+    Equal(TrackedControllers.TrackpadPressForce, .25f, "Saved trackpad press force reaches the controller reader");
+    indexRestored.TrackpadPressForce.Value = 0f;
+    Equal(TrackedControllers.TrackpadPressForce, .1f, "Trackpad press force cannot be configured to fire at rest");
+    indexRestored.TrackpadPressForce.Value = TrackedControllers.DefaultTrackpadPressForce;
+
     Hardware(ControllerBindingProfile.Frame);
     var stock = Config("old-stock");
     stock.Bind(frameSection, "Next Weapon - stick hand", ControllerButton.OutsideOrSecondary);
@@ -125,7 +187,7 @@ try
     Equal(migrated.Get(ControllerActionId.ClearTargets).Button, ControllerButton.None, "Stock clear no longer claims Y");
     Equal(migrated.Get(ControllerActionId.SelectTarget).Hand, ControllerHandRole.Stick, "Stock targeting moved to stick");
 
-    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
         foreach (var leftHanded in new[] { false, true })
         {
             Hardware(profile);
@@ -143,7 +205,7 @@ try
 
     // A menu confirmation is one undoable edit, even when it displaces several
     // actions. Use actual BepInEx values so restoration and persistence agree.
-    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
         foreach (var leftHanded in new[] { false, true })
         {
             Hardware(profile);
@@ -218,6 +280,7 @@ finally { Directory.Delete(directory, true); }
 
 ConfigFile Config(string name) => new(Path.Combine(directory, name + ".cfg"), false) { SaveOnConfigSet = false };
 void Hardware(ControllerBindingProfile profile) => TrackedControllers.Left = TrackedControllers.Right =
-    profile == ControllerBindingProfile.Frame ? ControllerHardwareProfile.SteamFrame : ControllerHardwareProfile.Touch;
+    profile == ControllerBindingProfile.Frame ? ControllerHardwareProfile.SteamFrame :
+    profile == ControllerBindingProfile.Index ? ControllerHardwareProfile.Index : ControllerHardwareProfile.Touch;
 void Equal<T>(T actual, T expected, string label) => True(EqualityComparer<T>.Default.Equals(actual, expected), label + $": expected {expected}, got {actual}");
 void True(bool value, string label) { if (!value) throw new Exception(label); count++; }

@@ -21,6 +21,13 @@ included unchanged and cropped into left/right views by the UI. No third-party
 license was supplied with this image; it is not covered by the code's GPL license
 or the former WebXR assets' MIT license.
 
+## Valve Index controller diagram
+
+`NOVR/Assets/Controllers/index-diagram.png` is an original schematic drawn for
+this project from `index-diagram.svg` beside it. It marks approximate control
+positions only and contains no Valve artwork. It is distributed under the
+repository's GPL license.
+
 ## Valve OpenXR controller profile
 
 `NOVR.XR.OpenXR/Features/Valve/SteamFrameControllerProfile.cs` is from

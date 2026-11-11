@@ -199,7 +199,8 @@ Wire persistence in [`ControllerProfileBindings`](../NOVR/Input/ControllerProfil
 without renaming existing keys. Add dispatch/gates in `ControllerActions`; use
 [`NativeControllerAction`](../NOVR/Input/NativeControllerAction.cs) for
 game input intents, translating strings only at the Rewired boundary. The binding
-editor consumes the shared model. Check both hardware profiles and handedness:
+editor consumes the shared model. Check every controller preset (Frame, Touch,
+Index) and both handedness settings:
 
 ```sh
 python tools/verify.py portable --suite controller-bindings --suite controller-runtime
