@@ -216,11 +216,12 @@ namespace NOVR.MotionControls
 {
     internal static class TrackedControllers
     {
+        internal const float DefaultTrackpadPressForce = .4f; internal static float TrackpadPressForce = DefaultTrackpadPressForce;
         internal static ControllerHardwareProfile Left, Right; internal static ControllerHardwareProfile Profile(bool left) => left ? Left : Right; internal static ControllerSample LeftSample, RightSample; internal static ControllerSample Read(bool left) => left ? LeftSample : RightSample;
     }
     internal struct ControllerSample
     {
-        internal bool Valid, NativeFrame, Primary, Secondary, Top, Outside, StickClick, Menu, Shoulder, PrimaryTouched, SecondaryTouched, TopTouched, OutsideTouched, ThumbstickTouched, TriggerTouched, GripTouched; internal float Trigger, Grip;
+        internal bool Valid, NativeFrame, Primary, Secondary, Top, Outside, StickClick, Menu, Shoulder, Trackpad, TrackpadTouched, PrimaryTouched, SecondaryTouched, TopTouched, OutsideTouched, ThumbstickTouched, TriggerTouched, GripTouched; internal float Trigger, Grip;
     }
     internal sealed class ControllerActions
     {

@@ -29,6 +29,7 @@ internal static class ControllerDiagramActivity
             ControllerButton.Menu => sample.Menu,
             ControllerButton.Shoulder => sample.Shoulder,
             ControllerButton.StickClick => sample.StickClick,
+            ControllerButton.Trackpad => sample.Trackpad,
             _ => false
         };
         if (pressed)
@@ -42,6 +43,7 @@ internal static class ControllerDiagramActivity
             ControllerButton.Top => sample.TopTouched,
             ControllerButton.Outside => sample.OutsideTouched,
             ControllerButton.StickClick => sample.ThumbstickTouched,
+            ControllerButton.Trackpad => sample.TrackpadTouched,
             _ => false
         };
         return touched ? ControllerDiagramInput.Touch : ControllerDiagramInput.None;

@@ -210,6 +210,9 @@ namespace UnityEngine.XR.OpenXR.Features.Interactions
     public class ValveIndexControllerProfile : Features.OpenXRInteractionFeature
     {
         public const string featureId = "index";
+        public class ValveIndexController : UnityEngine.InputSystem.XR.XRController
+        {
+        }
     }
     public class HTCViveControllerProfile : Features.OpenXRInteractionFeature
     {

@@ -60,7 +60,7 @@ internal sealed class ControllerDiagramView
             _cards[i] = card.GetComponent<Image>();
             _cards[i].color = new Color(.96f, .97f, .97f, 1);
             _cards[i].raycastTarget = false;
-            _cards[i].rectTransform.sizeDelta = ControllerDiagramImages.Size(false, false) + new Vector2(8, 8);
+            _cards[i].rectTransform.sizeDelta = ControllerDiagramImages.Size(ControllerBindingProfile.Touch, false) + new Vector2(8, 8);
             for (var view = 0; view < 2; view++)
             {
                 var go = new GameObject(view == 0 ? "Controller top artwork" : "Controller trigger artwork", typeof(RectTransform), typeof(CanvasRenderer), typeof(RawImage));
@@ -74,7 +74,8 @@ internal sealed class ControllerDiagramView
             _leaders[i] = lines.GetComponent<ControllerDiagramLeaders>();
             _leaders[i].raycastTarget = false;
             foreach (var value in new ControllerButton?[] { ControllerButton.Menu, ControllerButton.StickClick, null,
-                ControllerButton.Shoulder, ControllerButton.Trigger, ControllerButton.Top, ControllerButton.Secondary, ControllerButton.Primary, ControllerButton.Outside })
+                ControllerButton.Shoulder, ControllerButton.Trigger, ControllerButton.Top, ControllerButton.Secondary, ControllerButton.Primary, ControllerButton.Outside,
+                ControllerButton.Trackpad })
             {
                 var button = MakeButton(hand.transform, value?.ToString() ?? "Grip", Vector2.zero, new Vector2(126, 38));
                 var item = new Control
@@ -127,10 +128,11 @@ internal sealed class ControllerDiagramView
         for (var i = 0; i < 2; i++)
         {
             var left = i == 0;
-            var frame = _profiles[i] == ControllerBindingProfile.Frame;
+            var profile = _profiles[i];
+            var frame = profile == ControllerBindingProfile.Frame;
             _hands[i].SetActive(left == _left);
             _cards[i].gameObject.SetActive(!frame);
-            _tabs[i].text = (left ? "LEFT" : "RIGHT") + " · " + (stickLeft == left ? "STICK" : "THROTTLE") + "\n" + (frame ? "Steam Frame" : "Touch / Quest");
+            _tabs[i].text = (left ? "LEFT" : "RIGHT") + " · " + (stickLeft == left ? "STICK" : "THROTTLE") + "\n" + ControllerBindingDefaults.ProfileLabel(profile);
             NativeButtonFeedback.SetNormalColor(_tabButtons[i], left == _left ? new Color(.24f, .47f, .56f) : new Color(.1f, .24f, .29f));
             for (var view = 0; view < 2; view++)
             {
@@ -139,10 +141,10 @@ internal sealed class ControllerDiagramView
                 image.gameObject.SetActive(frame || !side);
                 if (!frame && side)
                     continue;
-                image.texture = ControllerDiagramImages.Get(frame, left, side);
-                image.uvRect = ControllerDiagramImages.Region(frame, left, side);
-                image.rectTransform.sizeDelta = ControllerDiagramImages.Size(frame, side);
-                image.rectTransform.anchoredPosition = ControllerDiagramImages.Position(frame, side);
+                image.texture = ControllerDiagramImages.Get(profile);
+                image.uvRect = ControllerDiagramImages.Region(profile, left, side);
+                image.rectTransform.sizeDelta = ControllerDiagramImages.Size(profile, side);
+                image.rectTransform.anchoredPosition = ControllerDiagramImages.Position(profile, side);
             }
             _segments.Clear();
             foreach (var item in _controls)
@@ -153,10 +155,11 @@ internal sealed class ControllerDiagramView
                 item.Button.gameObject.SetActive(supported);
                 if (!supported)
                     continue;
-                var position = ControllerDiagramLayout.Position(frame, left, item.Value);
+                var position = ControllerDiagramLayout.Position(profile, left, item.Value);
                 var columnLeft = position.x < 0;
                 ((RectTransform)item.Button.transform).anchoredPosition = position;
-                var system = !frame && !left && item.Value == ControllerButton.Menu;
+                // Touch's right system button and both Index system buttons stay with the runtime.
+                var system = item.Value == ControllerButton.Menu && (profile == ControllerBindingProfile.Index || !frame && !left);
                 item.Button.interactable = !system;
                 item.Name.text = item.Value == null ? "Grip" : system ? "System" : ControllerDiagramModel.ShortButton(item.Value.Value, left, _profiles[i]);
                 var assigned = item.Value == null || system ? Array.Empty<ControllerActionId>() : ControllerDiagramModel.Assigned(left, item.Value.Value, _profiles[i], stickLeft, bindings.Get);
@@ -165,8 +168,8 @@ internal sealed class ControllerDiagramView
                 if (item.Value == ControllerButton.StickClick && assigned.Length == 0)
                     item.Action.text = "Free: wheel";
                 NativeButtonFeedback.SetNormalColor(item.Button, _selectedLeft == left && _selectedButton == item.Value ? new Color(.24f, .47f, .56f) : new Color(.1f, .24f, .29f));
-                item.LiveRing.rectTransform.anchoredPosition = ControllerDiagramImages.Endpoint(frame, left, item.Value);
-                _segments.Add((position + new Vector2(columnLeft ? 63 : -63, 0), ControllerDiagramImages.Endpoint(frame, left, item.Value)));
+                item.LiveRing.rectTransform.anchoredPosition = ControllerDiagramImages.Endpoint(profile, left, item.Value);
+                _segments.Add((position + new Vector2(columnLeft ? 63 : -63, 0), ControllerDiagramImages.Endpoint(profile, left, item.Value)));
             }
             _leaders[i].Set(_segments);
         }

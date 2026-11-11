@@ -1,7 +1,7 @@
 using NOVR.MotionControls;
 
 var checks = 0;
-foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
     foreach (var stickLeft in new[] { false, true })
     {
         var bindings = ControllerBindingDefaults.Actions.ToDictionary(a => a, a => ControllerBindingDefaults.Get(profile, a));
@@ -29,8 +29,22 @@ foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindin
         Check(ControllerBindingDefaults.ResolveLeft(crossHand.Hand, stickLeft) == !fireLeft, "Cross-hand proposal resolves to the selected controller");
         var before = bindings[ControllerActionId.WeaponRelease];
         Check(before.Hand == fire.Hand && before.Button == fire.Button, "Reading/proposing from the diagram cannot mutate saved bindings");
-        var view = ControllerDiagramModel.Assigned(true, ControllerButton.Menu, profile, stickLeft, a => bindings[a]);
+        var viewButton = profile == ControllerBindingProfile.Index ? ControllerButton.Trackpad : ControllerButton.Menu;
+        var view = ControllerDiagramModel.Assigned(true, viewButton, profile, stickLeft, a => bindings[a]);
         Check(view.Contains(ControllerActionId.WristMenu), "Physical-left menu remains View regardless of stick handedness");
+        if (profile == ControllerBindingProfile.Index)
+        {
+            foreach (var left in new[] { false, true })
+                foreach (var unavailable in new[] { ControllerButton.Menu, ControllerButton.Shoulder, ControllerButton.Top, ControllerButton.Outside })
+                    Check(ControllerDiagramModel.Assigned(left, unavailable, profile, stickLeft, a => bindings[a]).Length == 0,
+                        "Index diagram never exposes system/unsupported inputs as assignments");
+            Check(ControllerDiagramModel.Assigned(false, ControllerButton.Trackpad, profile, stickLeft, a => bindings[a]).Length == 0,
+                "Right Index trackpad starts free for the pilot to assign");
+        }
+        else
+            foreach (var left in new[] { false, true })
+                Check(ControllerDiagramModel.Assigned(left, ControllerButton.Trackpad, profile, stickLeft, a => bindings[a]).Length == 0,
+                    "Only the Index diagram has a trackpad");
         if (profile == ControllerBindingProfile.Touch)
             foreach (var unavailable in new[] { ControllerButton.Menu, ControllerButton.Shoulder, ControllerButton.Top, ControllerButton.Outside })
                 Check(ControllerDiagramModel.Assigned(false, unavailable, profile, stickLeft, a => bindings[a]).Length == 0,
@@ -48,5 +62,10 @@ Check(ControllerDiagramModel.ShortButton(ControllerButton.Primary, true, Control
     ControllerDiagramModel.ShortButton(ControllerButton.Primary, true, ControllerBindingProfile.Touch) == "X" &&
     ControllerDiagramModel.ShortButton(ControllerButton.Secondary, false, ControllerBindingProfile.Frame) == "X" &&
     ControllerDiagramModel.ShortButton(ControllerButton.Secondary, false, ControllerBindingProfile.Touch) == "B", "Face labels distinguish Frame and Touch layouts");
+Check(ControllerDiagramModel.ShortButton(ControllerButton.Primary, true, ControllerBindingProfile.Index) == "A" &&
+    ControllerDiagramModel.ShortButton(ControllerButton.Secondary, true, ControllerBindingProfile.Index) == "B" &&
+    ControllerDiagramModel.ShortButton(ControllerButton.Primary, false, ControllerBindingProfile.Index) == "A" &&
+    ControllerDiagramModel.ShortButton(ControllerButton.Trackpad, true, ControllerBindingProfile.Index) == "Trackpad" &&
+    ControllerDiagramModel.ShortButton(ControllerButton.StickClick, false, ControllerBindingProfile.Index) == "Stick click", "Index labels use A/B on both hands and name the trackpad");
 Console.WriteLine($"Controller diagram mapping checks passed: {checks} assertions (actual mapping/default source; no UI rendering).");
 void Check(bool pass, string message) { if (!pass) throw new Exception(message); checks++; }

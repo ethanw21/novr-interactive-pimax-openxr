@@ -20,6 +20,7 @@ internal sealed partial class ControllerBindingPanel
     private Button? _bindingSave, _bindingUndo;
     private static ControllerBindings Bindings => ModConfiguration.Instance.ControllerBindings;
     private static bool StickLeft => ModConfiguration.Instance.MotionControls.LeftHanded.Value;
+    private static readonly int PresetCount = Enum.GetValues(typeof(ControllerBindingProfile)).Length;
 
     private void CreateBindingPages()
     {
@@ -27,7 +28,7 @@ internal sealed partial class ControllerBindingPanel
         GameObject? weapons = null, flight = null, system = null;
         AddLiveButton(() => "Preset: " + Bindings.Profile.Value, 0, 0, () =>
         {
-            Bindings.Profile.Value = (ControllerBindingProfile)(((int)Bindings.Profile.Value + 1) % 3);
+            Bindings.Profile.Value = (ControllerBindingProfile)(((int)Bindings.Profile.Value + 1) % PresetCount);
             RefreshBindingEditor();
         });
         AddButton("Visual controller diagram", 1, 0, OpenDiagram);
@@ -58,7 +59,8 @@ internal sealed partial class ControllerBindingPanel
         });
         AddButton("Leave unassigned", 1, 0, () => { _pendingBinding = new ControllerActionBinding(ControllerButton.None, _pendingBinding.Hand); RefreshBindingEditor(); });
         var choices = new[] { ControllerButton.Trigger, ControllerButton.Primary, ControllerButton.Secondary,
-            ControllerButton.StickClick, ControllerButton.Shoulder, ControllerButton.Menu, ControllerButton.Top, ControllerButton.Outside };
+            ControllerButton.StickClick, ControllerButton.Shoulder, ControllerButton.Menu, ControllerButton.Top, ControllerButton.Outside,
+            ControllerButton.Trackpad };
         for (var i = 0; i < choices.Length; i++)
         {
             var choice = choices[i];
@@ -72,9 +74,9 @@ internal sealed partial class ControllerBindingPanel
             _liveLabels.Add((text, () =>
             {
                 var left = ControllerBindings.ResolveLeft(_pendingBinding.Hand, StickLeft);
-                var frame = Bindings.ButtonProfile(left) == ControllerBindingProfile.Frame;
-                var selected = ControllerButtonNames.Resolve(_pendingBinding.Button, frame) == choice;
-                return (selected ? "✓ " : "") + ControllerButtonNames.Describe(choice, left, frame);
+                var profile = Bindings.ButtonProfile(left);
+                var selected = ControllerButtonNames.Resolve(_pendingBinding.Button, profile == ControllerBindingProfile.Frame) == choice;
+                return (selected ? "✓ " : "") + ControllerBindingDefaults.ButtonLabel(profile, left, choice);
             }
             ));
         }
@@ -116,7 +118,7 @@ internal sealed partial class ControllerBindingPanel
         return page;
     }
 
-    private static string ProfileName(ControllerBindingProfile profile) => profile == ControllerBindingProfile.Frame ? "Steam Frame" : "Touch / Quest";
+    private static string ProfileName(ControllerBindingProfile profile) => ControllerBindingDefaults.ProfileLabel(profile);
     private static string RoleName(ControllerHandRole role) => role switch
     {
         ControllerHandRole.Stick => "Stick",
@@ -127,7 +129,7 @@ internal sealed partial class ControllerBindingPanel
     private static string DescribeBinding(ControllerActionBinding binding)
     {
         var left = ControllerBindings.ResolveLeft(binding.Hand, StickLeft);
-        var text = ControllerButtonNames.Describe(binding.Button, left, Bindings.ButtonProfile(left) == ControllerBindingProfile.Frame);
+        var text = ControllerBindingDefaults.ButtonLabel(Bindings.ButtonProfile(left), left, binding.Button);
         return binding.Button == ControllerButton.None ? "Unassigned" : (left ? "L · " : "R · ") + text;
     }
     private void RefreshBindingEditor()

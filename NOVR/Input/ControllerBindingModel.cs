@@ -4,7 +4,7 @@ namespace NOVR.MotionControls;
 
 internal enum ControllerBindingProfile
 {
-    Auto, Frame, Touch
+    Auto, Frame, Touch, Index
 }
 internal enum ControllerHandRole
 {
@@ -39,10 +39,21 @@ internal static class ControllerBindingDefaults
         ControllerButton.Secondary, ControllerButton.StickClick, ControllerButton.Menu };
     private static readonly ControllerButton[] TouchRightButtons = { ControllerButton.None, ControllerButton.Trigger, ControllerButton.Primary,
         ControllerButton.Secondary, ControllerButton.StickClick };
+    // Both Index system buttons belong to the runtime. The trackpad takes the
+    // place of an application menu button on either hand.
+    private static readonly ControllerButton[] IndexButtons = { ControllerButton.None, ControllerButton.Trigger, ControllerButton.Primary,
+        ControllerButton.Secondary, ControllerButton.StickClick, ControllerButton.Trackpad };
+    private static ControllerButton[] Buttons(ControllerBindingProfile profile, bool left) => profile switch
+    {
+        ControllerBindingProfile.Frame => FrameButtons,
+        ControllerBindingProfile.Index => IndexButtons,
+        _ => left ? TouchLeftButtons : TouchRightButtons
+    };
 
     internal static ControllerActionBinding Get(ControllerBindingProfile profile, ControllerActionId action)
     {
-        var touch = profile == ControllerBindingProfile.Touch;
+        // Index A/B sit where Touch has A/B and X/Y, so it starts from the Touch layout.
+        var touch = profile == ControllerBindingProfile.Touch || profile == ControllerBindingProfile.Index;
         return action switch
         {
             ControllerActionId.Guns => new(ControllerButton.Trigger, ControllerHandRole.Stick),
@@ -56,7 +67,7 @@ internal static class ControllerBindingDefaults
             ControllerActionId.NextCountermeasure => new(touch ? ControllerButton.StickClick : ControllerButton.Secondary, ControllerHandRole.Throttle),
             ControllerActionId.Brake => new(ControllerButton.Trigger, ControllerHandRole.Throttle),
             ControllerActionId.Map => new(ControllerButton.OutsideOrSecondary, ControllerHandRole.Stick),
-            ControllerActionId.WristMenu => new(ControllerButton.Menu, ControllerHandRole.Left),
+            ControllerActionId.WristMenu => new(profile == ControllerBindingProfile.Index ? ControllerButton.Trackpad : ControllerButton.Menu, ControllerHandRole.Left),
             _ => new(ControllerButton.None, ControllerHandRole.Throttle)
         };
     }
@@ -77,16 +88,23 @@ internal static class ControllerBindingDefaults
         ResolveLeft(a.Hand, leftHanded) == ResolveLeft(b.Hand, leftHanded) && ControllerButtonNames.SamePhysicalButton(a.Button, b.Button, frame);
 
     internal static ControllerButton[] AvailableButtons(ControllerBindingProfile profile, bool left) =>
-        (ControllerButton[])(profile == ControllerBindingProfile.Frame ? FrameButtons : left ? TouchLeftButtons : TouchRightButtons).Clone();
+        (ControllerButton[])Buttons(profile, left).Clone();
     internal static bool IsButtonAvailable(ControllerBindingProfile profile, bool left, ControllerButton button)
     {
         var resolved = ControllerButtonNames.Resolve(button, profile == ControllerBindingProfile.Frame);
-        var buttons = profile == ControllerBindingProfile.Frame ? FrameButtons : left ? TouchLeftButtons : TouchRightButtons;
-        return Array.IndexOf(buttons, resolved) >= 0;
+        return Array.IndexOf(Buttons(profile, left), resolved) >= 0;
     }
     internal static bool IsBindingAvailable(ControllerBindingProfile profile, bool left, ControllerActionId action, ControllerButton button) =>
         IsButtonAvailable(profile, left, button) && !((action == ControllerActionId.Map || action == ControllerActionId.WristMenu) &&
             ControllerButtonNames.Resolve(button, profile == ControllerBindingProfile.Frame) is ControllerButton.Trigger or ControllerButton.StickClick);
+    internal static string ButtonLabel(ControllerBindingProfile profile, bool left, ControllerButton button) =>
+        ControllerButtonNames.Describe(button, left, profile == ControllerBindingProfile.Frame, profile == ControllerBindingProfile.Index);
+    internal static string ProfileLabel(ControllerBindingProfile profile) => profile switch
+    {
+        ControllerBindingProfile.Frame => "Steam Frame",
+        ControllerBindingProfile.Index => "Valve Index",
+        _ => "Touch / Quest"
+    };
     internal static string ActionLabel(ControllerActionId action) => action switch
     {
         ControllerActionId.Guns => "Guns",
