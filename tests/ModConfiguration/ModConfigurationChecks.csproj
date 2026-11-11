@@ -3,6 +3,7 @@
   <ItemGroup>
     <Compile Include="../../NOVR/Comfort/SeatClearanceRange.cs" Link="SeatClearanceRange.cs" />
     <Compile Include="../../NOVR/ModConfiguration.cs" Link="ModConfiguration.cs" />
+    <Compile Include="../../NOVR/Compatibility/HeadsetImagePolicy.cs" Link="HeadsetImagePolicy.cs" />
     <Compile Include="../../NOVR/Rendering/FixedFoveationSettings.cs" Link="FixedFoveationSettings.cs" />
     <Compile Include="../../NOVR/Rendering/FixedFoveationPolicy.cs" Link="FixedFoveationPolicy.cs" />
     <Compile Include="../../NOVR/FlightControls/MotionControlSettings.cs" Link="MotionControlSettings.cs" />

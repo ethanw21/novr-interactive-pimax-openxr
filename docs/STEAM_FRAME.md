@@ -56,6 +56,28 @@ errors. BepInEx's official [installation guide](https://docs.bepinex.dev/article
 and [Proton/Wine guide](https://docs.bepinex.dev/articles/advanced/proton_wine.html)
 explain the loader setup.
 
+**The headset shows only grey on Pimax OpenXR:** the bundled OpenXR plugin
+submits the game image as an alpha-blended layer, but the game never authors
+that alpha channel. SteamVR ignores it. A compositor that honors it can show its
+own grey backdrop instead of the game. NOVR requests an opaque layer on every
+runtime and, when the runtime's name contains "Pimax", also sets the alpha of
+the eye textures to one after each frame. The desktop view, headset resolution
+and game cameras are unchanged. The game's `Player.log` (Windows:
+`%USERPROFILE%\AppData\LocalLow\Shockfront\NuclearOption`) records the decision:
+
+```text
+[NOVR] Headset image: runtime=…; mode=Automatic; opaque layer=requested; alpha rewrite=on.
+```
+
+`Headset Image Opacity` under `[Compatibility]` in
+`BepInEx/config/deltawing.novr.cfg` accepts `Automatic`, `Always` (rewrite alpha
+on any runtime; try it if another runtime shows a grey or washed-out view) and
+`Off` (the plugin's alpha-blended default). It applies immediately. This path
+has source checks only and has not been confirmed on Pimax hardware. If the view
+stays grey with `alpha rewrite=on`, quit the game normally and share
+`Player.log`: on shutdown the OpenXR plugin appends its report of failed runtime
+calls.
+
 ## Tuning performance
 
 The desktop mirror and headset render resolution are separate. The mirror copies
