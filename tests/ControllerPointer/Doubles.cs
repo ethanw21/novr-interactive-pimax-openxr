@@ -369,7 +369,7 @@ namespace NOVR.MotionControls
 {
     public struct ControllerSample
     {
-        public bool Valid, Primary, Secondary, Menu, Shoulder, Top, Outside, StickClick; public float Trigger, Grip; public UnityEngine.Vector2 Axis; public UnityEngine.Vector3 AimPosition; public UnityEngine.Quaternion AimRotation; public int Device;
+        public bool Valid, Primary, Secondary, Menu, Shoulder, Top, Outside, StickClick, Trackpad; public float Trigger, Grip; public UnityEngine.Vector2 Axis; public UnityEngine.Vector3 AimPosition; public UnityEngine.Quaternion AimRotation; public int Device;
     }
     public static class TrackedControllers
     {

@@ -25,8 +25,11 @@ or the former WebXR assets' MIT license.
 
 `NOVR/Assets/Controllers/index-diagram.png` is an original schematic drawn for
 this project from `index-diagram.svg` beside it. It marks approximate control
-positions only and contains no Valve artwork. It is distributed under the
-repository's GPL license.
+positions only and contains no Valve artwork. Which side each control sits on
+was checked against the Valve Index model in the W3C
+[WebXR Input Profiles](https://github.com/immersive-web/webxr-input-profiles)
+repository; no part of that model is included. The schematic is distributed
+under the repository's GPL license.
 
 ## Valve OpenXR controller profile
 

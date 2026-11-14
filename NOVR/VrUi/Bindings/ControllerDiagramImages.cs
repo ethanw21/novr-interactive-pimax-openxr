@@ -76,15 +76,16 @@ internal static class ControllerDiagramImages
     }
     private static Vector2 IndexPoint(bool left, ControllerButton? button)
     {
-        // Control centers in the right-hand cell of index-diagram.svg. The left
-        // hand is its mirror image: thumbsticks inboard, A/B outboard.
+        // Control centers in the right-hand cell of index-diagram.svg; the left
+        // hand is its mirror image. As on Touch, thumbsticks sit outboard and
+        // A/B inboard. The trackpad leader lands on the pad's upper end, clear of B.
         var point = button switch
         {
-            ControllerButton.Primary => new Vector2(150, 114),
-            ControllerButton.Secondary => new Vector2(148, 80),
-            ControllerButton.StickClick => new Vector2(74, 84),
-            ControllerButton.Trackpad => new Vector2(110, 128),
-            ControllerButton.Menu => new Vector2(78, 136),
+            ControllerButton.Primary => new Vector2(76, 132),
+            ControllerButton.Secondary => new Vector2(70, 102),
+            ControllerButton.StickClick => new Vector2(142, 94),
+            ControllerButton.Trackpad => new Vector2(104, 88),
+            ControllerButton.Menu => new Vector2(140, 136),
             ControllerButton.Trigger => new Vector2(108, 18),
             _ => new Vector2(106, 262)
         };

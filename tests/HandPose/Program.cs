@@ -150,6 +150,22 @@ foreach (var left in new[] { false, true })
         }
         Settle();
         CheckFree();
+        // A firm Index trackpad press closes the thumb like a face button;
+        // a thumb merely resting on the pad only shows contact.
+        sample.ThumbrestTouched = true;
+        Settle();
+        var restingThumb = glove.Renderer.bones[GloveBones.ThumbDistal].localRotation;
+        sample.Trackpad = true;
+        Settle();
+        var pressingThumb = glove.Renderer.bones[GloveBones.ThumbDistal].localRotation;
+        Check(Quaternion.Angle(restingThumb, pressingThumb) > .5f, "Trackpad press looked the same as a resting thumb");
+        sample.Trackpad = sample.ThumbrestTouched = false;
+        sample.Primary = true;
+        Settle();
+        SameRotation(glove.Renderer.bones[GloveBones.ThumbDistal].localRotation, pressingThumb, "Trackpad press and face-button press closed the thumb differently");
+        sample.Primary = false;
+        Settle();
+        CheckFree();
 
         Settle(grip);
         Near(glove.Root.position, grip.position + grip.rotation * Fs20HandPoses.Wrist(false, left), "Throttle anchor changed");
@@ -330,7 +346,7 @@ foreach (var left in new[] { false, true })
     }
 }
 // Aim and grip axes are not interchangeable on angled controller handles.
-foreach (var profile in new[] { ControllerHardwareProfile.SteamFrame, ControllerHardwareProfile.Touch })
+foreach (var profile in new[] { ControllerHardwareProfile.SteamFrame, ControllerHardwareProfile.Touch, ControllerHardwareProfile.Index })
     foreach (var left in new[] { true, false })
         foreach (var aimed in new[] { Quaternion.identity, Quaternion.Euler(-90, 0, 0), Quaternion.Euler(23, 71, -14) })
         {

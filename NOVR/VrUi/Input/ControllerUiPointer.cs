@@ -182,7 +182,8 @@ internal sealed class ControllerUiPointer
     }
     private static uint Buttons(ControllerSample hand) =>
         (hand.Primary ? 1u : 0) | (hand.Secondary ? 2u : 0) | (hand.Menu ? 4u : 0) |
-        (hand.Shoulder ? 8u : 0) | (hand.Top ? 16u : 0) | (hand.Outside ? 32u : 0) | (hand.StickClick ? 64u : 0);
+        (hand.Shoulder ? 8u : 0) | (hand.Top ? 16u : 0) | (hand.Outside ? 32u : 0) | (hand.StickClick ? 64u : 0) |
+        (hand.Trackpad ? 128u : 0);
 
     private Ray HandRay(Camera camera, ControllerSample hand, int index)
     {

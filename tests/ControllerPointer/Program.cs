@@ -150,8 +150,9 @@ foreach (var loss in new[] { "hidden", "disabled", "noninteractable", "destroyed
 }
 
 // Every sampled physical button participates, including Frame's extra face
-// buttons; contact-only sensors and thumbstick motion are intentionally absent.
-foreach (var button in new[] { "Primary", "Secondary", "Menu", "Shoulder", "Top", "Outside", "StickClick", "Grip", "Trigger" })
+// buttons and an Index trackpad press; contact-only sensors and thumbstick
+// motion are intentionally absent.
+foreach (var button in new[] { "Primary", "Secondary", "Menu", "Shoulder", "Top", "Outside", "StickClick", "Trackpad", "Grip", "Trigger" })
 {
     var s = new Scene();
     s.EnableLeft();

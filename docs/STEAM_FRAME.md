@@ -3,7 +3,7 @@
 NOVR Interactive runs with the Windows game on Windows or through Proton on
 Linux. Both are compatibility targets. A successful test on one platform does
 not establish that the other works; report the host OS when reporting an issue.
-Steam Frame and Quest-style controllers use the same core virtual HOTAS and
+Steam Frame, Quest-style and Valve Index controllers use the same core virtual HOTAS and
 floating HUD widgets. See [controller bindings](CONTROLLER_BINDINGS.md).
 
 ## Starting a session

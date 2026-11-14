@@ -308,7 +308,7 @@ namespace NOVR.MotionControls
     using UnityEngine;
     internal struct ControllerSample
     {
-        public bool Valid, HasAimPose, Primary, Secondary, Top, Outside, StickClick, ThumbstickTouched, ButtonTouched, PrimaryTouched, ThumbrestTouched, TriggerTouched, GripTouched;
+        public bool Valid, HasAimPose, Primary, Secondary, Top, Outside, StickClick, Trackpad, ThumbstickTouched, ButtonTouched, PrimaryTouched, ThumbrestTouched, TriggerTouched, GripTouched;
         public float Grip, Trigger; public Vector3 Position; public Quaternion Rotation, AimRotation; public ControllerHardwareProfile Profile;
     }
     internal readonly struct Pose

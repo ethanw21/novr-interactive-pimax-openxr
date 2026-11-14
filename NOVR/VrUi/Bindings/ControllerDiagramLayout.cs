@@ -13,16 +13,16 @@ internal static class ControllerDiagramLayout
         float y;
         if (profile == ControllerBindingProfile.Index)
         {
-            // Index thumbsticks sit inboard, the reverse of Touch.
+            // Same sides as Touch. The trackpad sits between the thumbstick and
+            // A/B, nearer the buttons, so its callout heads their column. Grip
+            // joins that column too, away from the strap drawn on the outside.
             var thumbstickSide = button is ControllerButton.Trigger or ControllerButton.StickClick or ControllerButton.Menu;
-            columnLeft = thumbstickSide ? !left : left;
+            columnLeft = thumbstickSide ? left : !left;
             y = button switch
             {
-                ControllerButton.Trigger => 124,
-                ControllerButton.Secondary => 108,
-                ControllerButton.StickClick => 68,
-                ControllerButton.Primary => 60,
-                ControllerButton.Menu or ControllerButton.Trackpad => 12,
+                ControllerButton.Trigger or ControllerButton.Trackpad => 124,
+                ControllerButton.StickClick or ControllerButton.Secondary => 68,
+                ControllerButton.Menu or ControllerButton.Primary => 12,
                 _ => -44
             };
         }

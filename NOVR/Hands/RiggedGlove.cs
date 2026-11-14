@@ -323,7 +323,7 @@ internal sealed class RiggedGlove : IDisposable
         }
 
         var amount = 1 - Mathf.Exp(-22 * Time.unscaledDeltaTime);
-        var thumbPressed = sample.Primary || sample.Secondary || sample.Top || sample.Outside || sample.StickClick;
+        var thumbPressed = sample.Primary || sample.Secondary || sample.Top || sample.Outside || sample.StickClick || sample.Trackpad;
         var thumbTouch = sample.ThumbstickTouched || sample.ButtonTouched || sample.ThumbrestTouched;
         // Capacitive presence only changes visual joints. It never becomes a
         // click, acquisition action, trigger value, or a synthetic flight input.
