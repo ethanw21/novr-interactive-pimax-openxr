@@ -154,10 +154,10 @@ internal sealed class SeatClearanceMesh : IDisposable
             }
         }
         var head = Metric(transform.InverseTransformPoint(headWorld));
-        // A sub-millimetre deadband avoids rebuilding for tracker noise. This
-        // cache is reused by both eye/cockpit passes, without delaying fast motion.
+        // The dead band avoids rebuilding for tracker noise and small natural
+        // head movement. This cache is also reused by both eye/cockpit passes.
         if (_prepared && !basisChanged && radius == _lastRadius &&
-            NumericsVector.DistanceSquared(head, _lastHead) < .00000025f)
+            SeatClearanceRange.WithinDeadband(NumericsVector.DistanceSquared(head, _lastHead), radius))
             return;
         _lastHead = head;
         _lastRadius = radius;
@@ -165,9 +165,9 @@ internal sealed class SeatClearanceMesh : IDisposable
         _hasCut = false;
         if (NumericsVector.DistanceSquared(head, NumericsVector.Min(_metricMax, NumericsVector.Max(_metricMin, head))) >= radius * radius)
             return;
-        // The cached centre may lag by at most .5 mm. Keep the cut inside the
-        // requested radius even at that movement threshold.
-        var clipRadius = radius - .0005f;
+        // The cached centre may lag by at most one dead band. Keep the cut
+        // inside the requested radius even at that movement threshold.
+        var clipRadius = SeatClearanceRange.CutRadius(radius);
         ResetBuffers();
         for (var group = 0; group < _triangles.Length; group++)
         {

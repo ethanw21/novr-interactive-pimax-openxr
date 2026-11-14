@@ -19,12 +19,16 @@ public class VrCameraManager : MonoBehaviour
     private static readonly System.Predicate<Camera> IsDestroyedCamera = camera => camera == null;
     private Camera[] _cameraBuffer = System.Array.Empty<Camera>();
     private int _cameraCount;
+    // Cameras already seen with another name. Reading a name allocates a
+    // string, so each of these is asked once instead of on every frame.
+    private readonly HashSet<Camera> _unrelatedCameras = new();
 
     private void Update() // Todo: Make me behave on events if possible
     {
         // Scene cameras leave managed wrappers behind after Unity destroys them.
         // Retain live owners (including disabled cameras), not every old scene.
         IgnoredCameras.RemoveWhere(IsDestroyedCamera);
+        _unrelatedCameras.RemoveWhere(IsDestroyedCamera);
         // Keep discovering scene/menu cameras every frame, but reuse storage
         // instead of allocating an array for every headset frame.
         var capacity = Camera.allCamerasCount;
@@ -38,15 +42,18 @@ public class VrCameraManager : MonoBehaviour
         for (var i = 0; i < count; i++)
         {
             var camera = _cameraBuffer[i];
-            if (camera == null)
+            if (camera == null || _unrelatedCameras.Contains(camera))
                 continue;
             var gameObject = camera.gameObject;
-            if (gameObject.name is not (NuclearOptionMainCameraName or NuclearOptionMenuCameraName))
+            var name = gameObject.name;
+            if (name is not (NuclearOptionMainCameraName or NuclearOptionMenuCameraName))
             {
+                _unrelatedCameras.Add(camera);
                 continue;
             }
 
-            if (gameObject.name == NuclearOptionMainCameraName)
+            var isMainCamera = name == NuclearOptionMainCameraName;
+            if (isMainCamera)
             {
                 var existingTrackedCamera = GetTrackedMainCamera(gameObject);
                 if (existingTrackedCamera != null)
@@ -61,7 +68,7 @@ public class VrCameraManager : MonoBehaviour
                 continue;
             }
 
-            if (gameObject.name == NuclearOptionMainCameraName)
+            if (isMainCamera)
             {
                 SetUpMainCameraRig(camera);
             }

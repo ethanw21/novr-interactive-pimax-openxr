@@ -1,52 +1,98 @@
 using HarmonyLib;
 using NOVR.VrUi.SpecialBehavior;
-using System.Reflection;
 using NuclearOption.UIStyleSystem;
+using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace NOVR.VrUi.HarmonyPatches;
 
 
-// Ensures our hud markers are in our VR UI camera's space
+// Ensures our hud markers are in our VR UI camera's space.
+// This replaces the game's update for every marker on every frame, so it reads
+// private state through Harmony's injected fields and typed accessors, and takes
+// the camera poses once per marker loop instead of once per marker.
 internal static class HUDUnitMarkerViewPositionPatch
 {
-    private static readonly FieldInfo HiddenField = AccessTools.Field(typeof(global::HUDUnitMarker), "hidden");
-    private static readonly FieldInfo TransformField = AccessTools.Field(typeof(global::HUDUnitMarker), "_transform");
-    private static readonly FieldInfo IconField = AccessTools.Field(typeof(global::HUDUnitMarker), "icon");
-    private static readonly FieldInfo TimeCreatedField = AccessTools.Field(typeof(global::HUDUnitMarker), "timeCreated");
-    private static readonly FieldInfo ColorField = AccessTools.Field(typeof(global::HUDUnitMarker), "color");
-    private static readonly FieldInfo FlashingField = AccessTools.Field(typeof(global::HUDUnitMarker), "flashing");
-    private static readonly FieldInfo TargetArrowField = AccessTools.Field(typeof(global::CombatHUD), "targetArrow");
-    private static readonly FieldInfo TargetArrowTailField = AccessTools.Field(typeof(global::CombatHUD), "targetArrowTail");
-    private static readonly FieldInfo TargetTextField = AccessTools.Field(typeof(global::CombatHUD), "targetText");
-    private static readonly FieldInfo TargetInfoField = AccessTools.Field(typeof(global::CombatHUD), "targetInfo");
-    private static bool GetHidden(global::HUDUnitMarker marker) => (bool)HiddenField.GetValue(marker);
-    private static Transform GetTransform(global::HUDUnitMarker marker) => (Transform)TransformField.GetValue(marker);
-    private static Sprite GetIcon(global::HUDUnitMarker marker) => (Sprite)IconField.GetValue(marker);
-    private static float GetTimeCreated(global::HUDUnitMarker marker) => (float)TimeCreatedField.GetValue(marker);
-    private static Color GetColor(global::HUDUnitMarker marker) => (Color)ColorField.GetValue(marker);
-    private static bool GetFlashing(global::HUDUnitMarker marker) => (bool)FlashingField.GetValue(marker);
+    private static readonly AccessTools.FieldRef<global::CombatHUD, Image>? TargetArrow = FieldRef<Image>("targetArrow");
+    private static readonly AccessTools.FieldRef<global::CombatHUD, Transform>? TargetArrowTail = FieldRef<Transform>("targetArrowTail");
+    private static readonly AccessTools.FieldRef<global::CombatHUD, TextMeshProUGUI>? TargetText = FieldRef<TextMeshProUGUI>("targetText");
+    private static readonly AccessTools.FieldRef<global::CombatHUD, TextMeshProUGUI>? TargetInfo = FieldRef<TextMeshProUGUI>("targetInfo");
+    private static VrHudProjection.Frame _frame;
+    private static Camera? _cockpitHudCamera;
+    private static int _loop, _frameLoop = -1;
+    private static bool _inLoop;
+
+    private static AccessTools.FieldRef<global::CombatHUD, T>? FieldRef<T>(string name)
+    {
+        try
+        {
+            return AccessTools.FieldRefAccess<global::CombatHUD, T>(name);
+        }
+        catch (System.Exception exception)
+        {
+            Debug.LogWarning($"NOVR: CombatHUD.{name} is unavailable; the selected-target arrow keeps its native placement. {exception.Message}");
+            return null;
+        }
+    }
+
+    // One snapshot serves the whole native marker loop. A marker updated
+    // outside that loop, such as from its constructor, takes its own.
+    private static bool RefreshFrame()
+    {
+        if (_inLoop && _frameLoop == _loop)
+            return _frame.Valid;
+        _frameLoop = _loop;
+        _cockpitHudCamera = APIBus.CockpitHudCamera;
+        _frame = VrHudProjection.Frame.Capture(APIBus.MainCamera, _cockpitHudCamera);
+        if (!_frame.Valid)
+            return false;
+        var combat = SceneSingleton<CombatHUD>.i;
+        var targetInfo = combat == null || TargetInfo == null ? null : TargetInfo(combat);
+        if (targetInfo != null)
+            targetInfo.transform.rotation = _frame.HudRotation;
+        return true;
+    }
+
+    [HarmonyPatch(typeof(global::CombatHUD), "UpdateMarkers")]
+    private static class MarkerLoopPatch
+    {
+        [HarmonyPrefix]
+        private static void Prefix()
+        {
+            _loop++;
+            _inLoop = true;
+        }
+
+        [HarmonyFinalizer]
+        private static void Finalizer() => _inLoop = false;
+    }
+
+    // The style component is permanent, so attach it when the marker is made
+    // instead of looking it up again for every marker on every frame.
+    [HarmonyPatch(typeof(global::HUDUnitMarker), MethodType.Constructor, typeof(global::Unit), typeof(Image))]
+    private static class MarkerCreatedPatch
+    {
+        [HarmonyPostfix]
+        private static void Postfix(global::HUDUnitMarker __instance) =>
+            HudElementStyle.Add(__instance.image, HudElementKind.Marker);
+    }
 
     [HarmonyPatch(typeof(global::HUDUnitMarker), nameof(global::HUDUnitMarker.UpdatePosition))]
     private static class UpdatePositionPatch
     {
         [HarmonyPrefix]
-        private static bool Prefix(global::HUDUnitMarker __instance, FactionHQ hq, global::GlobalPosition viewPosition, Vector3 cameraForward)
+        private static bool Prefix(global::HUDUnitMarker __instance, FactionHQ hq, bool ___hidden, Transform ____transform,
+            Sprite ___icon, float ___timeCreated, Color ___color, bool ___flashing)
         {
-            HudElementStyle.Add(__instance.image, HudElementKind.Marker);
-            var mainCamera = APIBus.MainCamera;
-            var cockpitHudCamera = APIBus.CockpitHudCamera;
-            if (mainCamera == null || cockpitHudCamera == null)
+            if (!RefreshFrame())
                 return true;
 
-            var markerTransform = GetTransform(__instance);
-            markerTransform.rotation = cockpitHudCamera.transform.rotation;
+            var cockpitHudCamera = _cockpitHudCamera!;
+            var markerTransform = ____transform;
+            markerTransform.rotation = _frame.HudRotation;
 
-            var targetInfo = TargetInfoField.GetValue(SceneSingleton<CombatHUD>.i) as Component;
-            if (targetInfo != null)
-                targetInfo.transform.rotation = cockpitHudCamera.transform.rotation;
-
-            if (GetHidden(__instance))
+            if (___hidden)
                 return false;
 
             GlobalPosition knownPosition = __instance.unit.GlobalPosition();
@@ -66,7 +112,7 @@ internal static class HUDUnitMarkerViewPositionPatch
                 else
                 {
                     __instance.image.enabled = true;
-                    if (VrHudProjection.TryProjectToCockpitHud(knownWorldPosition, out var targetHudPosition))
+                    if (_frame.TryProject(knownWorldPosition, out var targetHudPosition))
                         markerTransform.position = targetHudPosition;
                     SetTargetArrow(SceneSingleton<CombatHUD>.i, false, Vector3.zero, Vector3.zero, Vector3.zero,
                         cockpitHudCamera);
@@ -87,10 +133,10 @@ internal static class HUDUnitMarkerViewPositionPatch
                         return false;
                     __instance.image.sprite = DynamicMap.GetFactionMode(__instance.unit.NetworkHQ) == FactionMode.Friendly
                         ? GameAssets.i.targetUnitSpriteFriendly
-                        : GetIcon(__instance);
+                        : ___icon;
                 }
             }
-            else if (Vector3.Dot(knownWorldPosition - mainCamera.transform.position, mainCamera.transform.forward) < 0.0f)
+            else if (_frame.IsBehind(knownWorldPosition))
             {
                 if (!__instance.image.enabled)
                     return false;
@@ -100,39 +146,37 @@ internal static class HUDUnitMarkerViewPositionPatch
             {
                 if (!__instance.image.enabled)
                     __instance.image.enabled = true;
-                if (VrHudProjection.TryProjectToCockpitHud(knownWorldPosition, out var targetHudPosition))
+                if (_frame.TryProject(knownWorldPosition, out var targetHudPosition))
                     markerTransform.position = targetHudPosition;
 
                 if (__instance.fresh)
                 {
-                    var markerColor = GetColor(__instance);
                     var warningColor = ThemeManager.Active.ColorTheme.Warning;
-                    var t = Time.timeSinceLevelLoad - GetTimeCreated(__instance);
-                    __instance.image.color = Color.Lerp(markerColor + warningColor, markerColor, t);
+                    var t = Time.timeSinceLevelLoad - ___timeCreated;
+                    __instance.image.color = Color.Lerp(___color + warningColor, ___color, t);
                     if (t > 1.0f)
                         __instance.fresh = false;
                 }
 
-                if (!GetFlashing(__instance))
+                if (!___flashing)
                     return false;
-                var flashingColor = GetColor(__instance);
                 var flashingWarningColor = ThemeManager.Active.ColorTheme.Warning;
                 __instance.image.color = Color.Lerp(
-                    flashingColor + flashingWarningColor,
-                    flashingColor,
+                    ___color + flashingWarningColor,
+                    ___color,
                     Mathf.Sin(Time.timeSinceLevelLoad * 20f) + 0.5f);
             }
 
             return false;
         }
 
-
-
         private static void SetTargetArrow(global::CombatHUD instance, bool enabled, Vector3 position, Vector3 targetPosition, Vector3 up, Component screenSpaceCamera)
         {
-            var targetArrow = TargetArrowField.GetValue(instance) as Behaviour;
-            var targetArrowTail = TargetArrowTailField.GetValue(instance) as Transform;
-            var targetText = TargetTextField.GetValue(instance) as Behaviour;
+            if (instance == null || TargetArrow == null || TargetArrowTail == null || TargetText == null)
+                return;
+            var targetArrow = TargetArrow(instance);
+            var targetArrowTail = TargetArrowTail(instance);
+            var targetText = TargetText(instance);
             if (targetArrow == null || targetArrowTail == null || targetText == null)
                 return;
 

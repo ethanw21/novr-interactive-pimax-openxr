@@ -8,6 +8,11 @@ namespace NOVR;
 [HarmonyPatch(typeof(Camera), "set_fieldOfView")]
 public static class CameraPatches
 {
+    // The game sets the main camera's FOV every frame. Remember that camera's
+    // URP data so the usual call does not search its components again.
+    private static Camera? _lastCamera;
+    private static UniversalAdditionalCameraData? _lastData;
+
     [HarmonyPrefix]
     private static bool AllowNonHeadsetFov(Camera __instance)
     {
@@ -21,7 +26,12 @@ public static class CameraPatches
 
         // URP chooses XR through additional camera data. stereoTargetEye alone
         // is not sufficient to opt an URP camera out of headset rendering.
-        var data = __instance.GetComponent<UniversalAdditionalCameraData>();
+        if (!ReferenceEquals(__instance, _lastCamera) || _lastData == null)
+        {
+            _lastCamera = __instance;
+            _lastData = __instance.GetComponent<UniversalAdditionalCameraData>();
+        }
+        var data = _lastData;
         // Without additional data, URP defaults to XR rendering as well.
         return data != null && !data.allowXRRendering;
     }
