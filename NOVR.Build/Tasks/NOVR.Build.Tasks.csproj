@@ -1,6 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- This task is loaded by the MSBuild that compiles it, and references that
+         MSBuild's own assemblies. Target the same SDK's runtime, so a newer SDK on
+         the build machine cannot pair them with an older System.Runtime. -->
+    <TargetFramework>net$(BundledNETCoreAppTargetFrameworkVersion)</TargetFramework>
     <Nullable>enable</Nullable>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
