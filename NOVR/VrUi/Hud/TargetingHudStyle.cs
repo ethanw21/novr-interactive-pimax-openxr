@@ -1,5 +1,5 @@
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
 using TMPro;
@@ -13,6 +13,11 @@ internal sealed class TargetingHudStyle : MonoBehaviour
     private static readonly FieldInfo TargetTextField = AccessTools.Field(typeof(CombatHUD), "targetText");
     private static readonly FieldInfo TargetInfoField = AccessTools.Field(typeof(CombatHUD), "targetInfo");
     private static readonly FieldInfo TargetArrowField = AccessTools.Field(typeof(CombatHUD), "targetArrow");
+    private static readonly Dictionary<Type, GraphicField[]> FieldsByType = new();
+    private static readonly Predicate<Graphic> IsDestroyed = graphic => graphic == null;
+    private readonly HashSet<Graphic> _styled = new();
+    private readonly List<HUDWeaponState> _states = new();
+    private readonly List<Graphic> _graphics = new();
     private float _nextScan;
     private CombatHUD? _labelOwner;
     private HudElementStyle? _targetTextStyle, _targetInfoStyle;
@@ -62,54 +67,100 @@ internal sealed class TargetingHudStyle : MonoBehaviour
         if (Time.unscaledTime < _nextScan)
             return;
         _nextScan = Time.unscaledTime + .5f;
+        _styled.RemoveWhere(IsDestroyed);
         var flight = SceneSingleton<FlightHud>.i;
         if (flight != null)
         {
-            HudElementStyle.Add(flight.velocityVector, HudElementKind.Reticle);
-            HudElementStyle.Add(flight.waterline, HudElementKind.Reticle);
+            Style(flight.velocityVector, HudElementKind.Reticle);
+            Style(flight.waterline, HudElementKind.Reticle);
         }
         if (combat == null)
             return;
-        HudElementStyle.Add(combat.targetDesignator, HudElementKind.Reticle);
-        HudElementStyle.Add(TargetArrowField.GetValue(combat) as Graphic, HudElementKind.Marker);
+        Style(combat.targetDesignator, HudElementKind.Reticle);
+        Style(TargetArrowField.GetValue(combat) as Graphic, HudElementKind.Marker);
         if (flight == null)
             return;
-        foreach (var state in flight.GetComponentsInChildren<HUDWeaponState>(true))
+        _states.Clear();
+        flight.GetComponentsInChildren(true, _states);
+        foreach (var state in _states)
         {
+            if (state == null)
+                continue;
             var widget = state is HUDMissileState || state is HUDLaserGuidedState || state is HUDCargoState;
             if (widget)
             {
                 // Scale every part around the authored widget origin, including
                 // static labels/artwork that have no serialized script field.
                 // Target-designator objects are outside this hierarchy.
-                foreach (var graphic in state.GetComponentsInChildren<Graphic>(true))
+                _graphics.Clear();
+                state.GetComponentsInChildren(true, _graphics);
+                foreach (var graphic in _graphics)
                     // TMP's parent callback already styles every material mesh.
                     if (graphic is not TMP_SubMeshUI)
-                        HudElementStyle.Add(graphic, HudElementKind.Weapon, state.transform);
+                        Style(graphic, HudElementKind.Weapon, state.transform);
                 continue;
             }
-            foreach (var field in state.GetType().GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+            foreach (var field in GraphicFields(state.GetType()))
             {
-                void Register(Graphic g)
+                if (field.Array)
                 {
-                    // Shared target-designator graphics belong to the flight HUD.
-                    if (!g.transform.IsChildOf(state.transform))
-                        return;
-                    var kind = g is TMP_Text ? HudElementKind.Label :
-                        field.Name == "line" ? HudElementKind.HorizontalLine :
-                        field.Name == "ccipLine" || field.Name == "alignmentBar" ? HudElementKind.VerticalLine : HudElementKind.Reticle;
-                    HudElementStyle.Add(g, kind);
+                    if (field.Info.GetValue(state) is Graphic[] graphics)
+                        foreach (var g in graphics)
+                            Register(state, field.Kind, g);
                 }
-                if (typeof(Graphic).IsAssignableFrom(field.FieldType))
-                {
-                    if (field.GetValue(state) is Graphic g)
-                        Register(g);
-                }
-                else if (typeof(Graphic[]).IsAssignableFrom(field.FieldType) && field.GetValue(state) is Graphic[] graphics)
-                    foreach (var g in graphics)
-                        if (g != null)
-                            Register(g);
+                else
+                    Register(state, field.Kind, field.Info.GetValue(state) as Graphic);
             }
+        }
+        _states.Clear();
+        _graphics.Clear();
+    }
+
+    private void Register(HUDWeaponState state, HudElementKind kind, Graphic? graphic)
+    {
+        // Shared target-designator graphics belong to the flight HUD.
+        if (graphic == null || _styled.Contains(graphic) || !graphic.transform.IsChildOf(state.transform))
+            return;
+        Style(graphic, graphic is TMP_Text ? HudElementKind.Label : kind);
+    }
+
+    // A style component is permanent once attached. This scan repeats twice a
+    // second to catch late native graphics, so remember what it has already
+    // styled instead of looking every component up again each time.
+    private void Style(Graphic? graphic, HudElementKind kind, Transform? group = null)
+    {
+        if (graphic == null || !_styled.Add(graphic))
+            return;
+        HudElementStyle.Add(graphic, kind, group);
+    }
+
+    private static GraphicField[] GraphicFields(Type type)
+    {
+        if (FieldsByType.TryGetValue(type, out var known))
+            return known;
+        var found = new List<GraphicField>();
+        foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public))
+        {
+            var array = typeof(Graphic[]).IsAssignableFrom(field.FieldType);
+            if (!array && !typeof(Graphic).IsAssignableFrom(field.FieldType))
+                continue;
+            var kind = field.Name == "line" ? HudElementKind.HorizontalLine :
+                field.Name == "ccipLine" || field.Name == "alignmentBar" ? HudElementKind.VerticalLine : HudElementKind.Reticle;
+            found.Add(new GraphicField(field, array, kind));
+        }
+        return FieldsByType[type] = found.ToArray();
+    }
+
+    private readonly struct GraphicField
+    {
+        internal readonly FieldInfo Info;
+        internal readonly bool Array;
+        internal readonly HudElementKind Kind;
+        internal GraphicField(FieldInfo info, bool array, HudElementKind kind)
+        {
+            Info = info;
+            Array = array;
+            Kind = kind;
         }
     }
 }
