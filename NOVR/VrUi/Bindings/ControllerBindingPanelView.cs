@@ -178,7 +178,7 @@ internal sealed partial class ControllerBindingPanel
         var selected = _diagramButton.GetValueOrDefault();
         var assigned = fixedGrip ? Array.Empty<ControllerActionId>() : ControllerDiagramModel.Assigned(_diagramLeft, selected,
             _diagramHardware, StickLeft, Bindings.Get);
-        _diagramInfo.text = (_diagramLeft ? "LEFT · " : "RIGHT · ") + (fixedGrip ? "GRIP" : ControllerButtonNames.Describe(selected, _diagramLeft, _diagramHardware == ControllerBindingProfile.Frame)) + "\n" +
+        _diagramInfo.text = (_diagramLeft ? "LEFT · " : "RIGHT · ") + (fixedGrip ? "GRIP" : ControllerBindingDefaults.ButtonLabel(_diagramHardware, _diagramLeft, selected)) + "\n" +
             (fixedGrip ? "Holds the nearby stick or throttle.\nSet HOLD / TOGGLE in Flight controls.\nGrip and thumbstick axes cannot be rebound here." :
              assigned.Length == 0 ? "Unassigned. Choose an action below." : string.Join("\n", assigned.Take(3).Select(a => ControllerBindings.ActionLabel(a) +
                 (a == ControllerActionId.Map ? " · free" : a == ControllerActionId.WristMenu ? " · any grip" : " · gripped"))) + (assigned.Length > 3 ? "\nMore assignments below." : ""));

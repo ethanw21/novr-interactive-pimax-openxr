@@ -37,7 +37,9 @@ internal sealed class RiggedGlove : IDisposable
         None,
         Thumb,
         Index,
-        Grasping
+        Middle,
+        Ring,
+        Little
     }
 
     private readonly FingerGroup[] _fingers;
@@ -45,6 +47,9 @@ internal sealed class RiggedGlove : IDisposable
     private bool _disposed;
     private readonly bool _left;
     private float _grip, _trigger, _thumb, _thumbContact, _indexContact, _triggerPressure;
+    // The three grasping fingers. They move together with the grip unless the
+    // runtime tracks each finger of a free hand.
+    private float _middle, _ring, _little;
     private bool _wasFittedStick;
     private readonly Quaternion[] _animatedStickThumb = new Quaternion[3];
     private const float AttachmentEntrySeconds = .12f, AttachmentReleaseSeconds = .09f;
@@ -144,7 +149,9 @@ internal sealed class RiggedGlove : IDisposable
 
                 _fingers[i] = b.name.Contains("thumb") ? FingerGroup.Thumb :
                     b.name.Contains("index") ? FingerGroup.Index :
-                    b.name.Contains("finger") ? FingerGroup.Grasping : FingerGroup.None;
+                    b.name.Contains("middle") ? FingerGroup.Middle :
+                    b.name.Contains("ring") ? FingerGroup.Ring :
+                    b.name.Contains("finger") ? FingerGroup.Little : FingerGroup.None;
             }
 
             for (var i = 0; i < _bones.Length; i++)
@@ -216,7 +223,9 @@ internal sealed class RiggedGlove : IDisposable
         {
             FingerGroup.Thumb => _thumb,
             FingerGroup.Index => _trigger,
-            FingerGroup.Grasping => _grip,
+            FingerGroup.Middle => _middle,
+            FingerGroup.Ring => _ring,
+            FingerGroup.Little => _little,
             _ => 0
         };
         return Quaternion.Slerp(_open[bone], _closed[bone], curl);
@@ -323,7 +332,7 @@ internal sealed class RiggedGlove : IDisposable
         }
 
         var amount = 1 - Mathf.Exp(-22 * Time.unscaledDeltaTime);
-        var thumbPressed = sample.Primary || sample.Secondary || sample.Top || sample.Outside || sample.StickClick;
+        var thumbPressed = sample.Primary || sample.Secondary || sample.Top || sample.Outside || sample.StickClick || sample.Trackpad;
         var thumbTouch = sample.ThumbstickTouched || sample.ButtonTouched || sample.ThumbrestTouched;
         // Capacitive presence only changes visual joints. It never becomes a
         // click, acquisition action, trigger value, or a synthetic flight input.
@@ -332,8 +341,17 @@ internal sealed class RiggedGlove : IDisposable
         _indexContact = Mathf.Lerp(_indexContact, sample.Trigger > .02f ? Mathf.Lerp(.85f, 1, Mathf.Clamp01(sample.Trigger)) : sample.TriggerTouched ? .85f : 0, amount);
         // Leave space for a roughly 5 cm grip instead of crushing a full fist
         // through the handle. The index moves a little with the real trigger.
-        _grip = Mathf.Lerp(_grip, pinching ? .45f : pointing ? .75f : held ? .5f : Mathf.Max(Mathf.Clamp01(sample.Grip), sample.GripTouched ? .32f : 0), amount);
-        _trigger = Mathf.Lerp(_trigger, pinching ? .35f : pointing ? 0f : held ? Mathf.Lerp(.48f, .62f, Mathf.Clamp01(sample.Trigger)) : Mathf.Max(Mathf.Clamp01(sample.Trigger), sample.TriggerTouched ? .2f : 0), amount);
+        var gripTarget = pinching ? .45f : pointing ? .75f : held ? .5f : Mathf.Max(Mathf.Clamp01(sample.Grip), sample.GripTouched ? .32f : 0);
+        var triggerTarget = pinching ? .35f : pointing ? 0f : held ? Mathf.Lerp(.48f, .62f, Mathf.Clamp01(sample.Trigger)) : Mathf.Max(Mathf.Clamp01(sample.Trigger), sample.TriggerTouched ? .2f : 0);
+        // A free hand shows each tracked finger. Holding a handle, pinching a
+        // widget and pointing keep their authored poses. The trigger still
+        // closes the index finger if the runtime reports less than the pull.
+        var tracked = sample.HasFingers && !pinching && !pointing && !held;
+        _grip = Mathf.Lerp(_grip, gripTarget, amount);
+        _trigger = Mathf.Lerp(_trigger, tracked ? Mathf.Max(Mathf.Clamp01(sample.Fingers.Index), Mathf.Clamp01(sample.Trigger)) : triggerTarget, amount);
+        _middle = Mathf.Lerp(_middle, tracked ? Mathf.Clamp01(sample.Fingers.Middle) : gripTarget, amount);
+        _ring = Mathf.Lerp(_ring, tracked ? Mathf.Clamp01(sample.Fingers.Ring) : gripTarget, amount);
+        _little = Mathf.Lerp(_little, tracked ? Mathf.Clamp01(sample.Fingers.Little) : gripTarget, amount);
         _thumb = Mathf.Lerp(_thumb, pinching ? .45f : pointing ? .7f : held ? .65f : thumbPressed ? 1 : thumbTouch ? .65f : _grip * .3f, amount);
         for (var i = 0; i < _bones.Length; i++)
         {

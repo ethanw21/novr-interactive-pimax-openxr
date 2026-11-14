@@ -3,6 +3,7 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.XR;
 using UnityEngine.XR.OpenXR;
+using UnityEngine.XR.OpenXR.Features;
 using UnityEngine.XR.OpenXR.Features.Interactions;
 using CommonUsages = UnityEngine.XR.CommonUsages;
 
@@ -10,15 +11,20 @@ namespace NOVR.MotionControls;
 
 internal struct ControllerSample
 {
-    public bool Valid, HasAxis, HasAimPose, StickClick, Primary, Secondary, Menu, Shoulder, Top, Outside, NativeFrame;
+    public bool Valid, HasAxis, HasAimPose, StickClick, Primary, Secondary, Menu, Shoulder, Top, Outside, Trackpad, NativeFrame;
+    // Valve Index only. GripSqueeze is a firm squeeze past the configured force;
+    // SwipeUp and SwipeDown read as held for a moment after a thumb swipe.
+    public bool GripSqueeze, SwipeUp, SwipeDown, HasTrackpadAxis, HasFingers;
     // Presence is visual-only and never aliases a button press or flight action.
-    public bool HasThumbTouch, HasTriggerTouch, ThumbstickTouched, ButtonTouched, PrimaryTouched, SecondaryTouched, TopTouched, OutsideTouched, ThumbrestTouched, TriggerTouched, GripTouched;
+    public bool HasThumbTouch, HasTriggerTouch, ThumbstickTouched, ButtonTouched, PrimaryTouched, SecondaryTouched, TopTouched, OutsideTouched, ThumbrestTouched, TrackpadTouched, TriggerTouched, GripTouched;
     public InputDevice Device;
     public ControllerHardwareProfile Profile;
-    public float Grip, Trigger;
+    public float Grip, Trigger, GripForce, TrackpadScroll;
     public Vector3 Position, AimPosition;
     public Quaternion Rotation, AimRotation;
-    public Vector2 Axis;
+    public Vector2 Axis, TrackpadAxis;
+    // Per-finger curl from the runtime's hand tracking. Visual only.
+    public FingerCurls Fingers;
 }
 
 internal static class TrackedControllers
@@ -31,6 +37,27 @@ internal static class TrackedControllers
     private static readonly ControllerSample[] Samples = new ControllerSample[2];
     private static Vector3 _sampleSeat, _sampleAnchor, _sampleTranslation;
     private static Quaternion _sampleRotation;
+    // The Index interaction profile has trackpad force and touch, but no click.
+    // A press is force past this threshold; it releases a little lower so a
+    // steady thumb cannot chatter. ControllerBindings applies the saved value.
+    internal const float DefaultTrackpadPressForce = .4f;
+    internal static float TrackpadPressForce = DefaultTrackpadPressForce;
+    private static readonly InputFeatureUsage<float> TrackpadForceUsage = new("Secondary2DAxisForce");
+    private static readonly bool[] TrackpadHeld = new bool[2];
+    // Grip force is separate from the grip value that holds a handle: the value
+    // rises as the hand closes, force only when the handle is squeezed.
+    internal const float DefaultGripSqueezeForce = .5f;
+    internal static float GripSqueezeForce = DefaultGripSqueezeForce;
+    private static readonly InputFeatureUsage<float> GripForceUsage = new("GripForce");
+    private static readonly bool[] SqueezeHeld = new bool[2];
+    internal static float TrackpadSwipeDistance = TrackpadSwipe.DefaultDistance;
+    private static readonly TrackpadSwipe[] Swipes = { new(), new() };
+    // Read at startup to decide whether the hand tracking extension is requested.
+    internal static bool FingerTracking = true;
+    private static readonly Vector3[] Joints = new Vector3[FingerCurlMath.JointCount];
+    internal static bool ForcePressed(bool held, float force, float threshold) =>
+        FlightControlMath.IsFinite(force) && FlightControlMath.IsFinite(threshold) && threshold > 0 &&
+        force >= (held ? threshold * .75f : threshold);
     // One coherent runtime sample per hand per frame, shared by input, UI and visuals.
     // Recenter/seat edits invalidate mapped samples immediately.
     public static bool Available
@@ -61,6 +88,7 @@ internal static class TrackedControllers
     private static ControllerHardwareProfile Profile(XRController? controller) => controller switch
     {
         Valve.OpenXR.Utils.SteamFrameControllerProfile.SteamFrameController => ControllerHardwareProfile.SteamFrame,
+        ValveIndexControllerProfile.ValveIndexController => ControllerHardwareProfile.Index,
         OculusTouchControllerProfile.OculusTouchController => ControllerHardwareProfile.Touch,
         MetaQuestTouchPlusControllerProfile.QuestTouchPlusController => ControllerHardwareProfile.Touch,
         MetaQuestTouchProControllerProfile.QuestProTouchController => ControllerHardwareProfile.Touch,
@@ -68,8 +96,10 @@ internal static class TrackedControllers
         _ => ControllerHardwareProfile.Other
     };
     internal static bool NativeFrame(bool left) => Profile(left) == ControllerHardwareProfile.SteamFrame;
+    // Touch's right system button and both Index system buttons belong to the
+    // runtime: SteamVR opens its dashboard and Pimax its overlay with them.
     internal static bool IsApplicationMenuAvailable(ControllerHardwareProfile profile, bool left) =>
-        profile != ControllerHardwareProfile.Touch || left;
+        profile != ControllerHardwareProfile.Index && (profile != ControllerHardwareProfile.Touch || left);
 
     // SteamVR's legacy XR feature bridge and OpenXR's named Input System
     // controls need not expose exactly the same set of usages. Prefer an
@@ -113,6 +143,18 @@ internal static class TrackedControllers
         return Samples[i] = ReadRuntime(left);
     }
     private static ControllerSample ReadRuntime(bool left)
+    {
+        var sample = ReadTracked(left);
+        // A press held through tracking loss must be made again afterwards.
+        if (!sample.Valid)
+        {
+            var hand = left ? 0 : 1;
+            TrackpadHeld[hand] = SqueezeHeld[hand] = false;
+            Swipes[hand].Reset();
+        }
+        return sample;
+    }
+    private static ControllerSample ReadTracked(bool left)
     {
         if (!Available)
             return default;
@@ -176,6 +218,43 @@ internal static class TrackedControllers
         var outsideTouch = nativeFrame && Button("faceButtonOutsideTouched");
         var faceTouch = primaryTouch || secondaryTouch || topTouch || outsideTouch;
         var restTouch = Touch("thumbrestTouched", out var hasRestTouch);
+        var trackpad = false;
+        var trackpadTouch = false;
+        var squeeze = false;
+        var gripForce = 0f;
+        var hasPad = false;
+        var pad = Vector2.zero;
+        var swipe = TrackpadSwipeDirection.None;
+        var hasFingers = false;
+        FingerCurls fingers = default;
+        if (profile == ControllerHardwareProfile.Index)
+        {
+            trackpadTouch = Button("trackpadTouched");
+            ReadAnalog(device, TrackpadForceUsage, inputDevice, "trackpadForce", out var trackpadForce);
+            trackpad = ForcePressed(TrackpadHeld[handIndex], trackpadForce, TrackpadPressForce);
+            ReadAnalog(device, GripForceUsage, inputDevice, "gripForce", out gripForce);
+            squeeze = ForcePressed(SqueezeHeld[handIndex], gripForce, GripSqueezeForce);
+            if (!FlightControlMath.IsFinite(gripForce))
+                gripForce = 0;
+            hasPad = device.TryGetFeatureValue(CommonUsages.secondary2DAxis, out pad) &&
+                     FlightControlMath.IsFinite(pad.x) && FlightControlMath.IsFinite(pad.y);
+            if (!hasPad && inputDevice?.TryGetChildControl<Vector2Control>("trackpad") is Vector2Control padControl)
+            {
+                pad = padControl.ReadValue();
+                hasPad = FlightControlMath.IsFinite(pad.x) && FlightControlMath.IsFinite(pad.y);
+            }
+            if (!hasPad)
+                pad = Vector2.zero;
+            swipe = Swipes[handIndex].Update(trackpadTouch && hasPad, pad.x, pad.y, trackpad, Time.unscaledTime, TrackpadSwipeDistance);
+            // The runtime derives finger joints from the controller's own
+            // sensors. They only shape the glove, never an input.
+            hasFingers = FingerTracking && NovrHandJointsFeature.TryGetJointPositions(left, Joints) &&
+                         FingerCurlMath.TryCurls(Joints, out fingers);
+        }
+        else
+            Swipes[handIndex].Reset();
+        TrackpadHeld[handIndex] = trackpad;
+        SqueezeHeld[handIndex] = squeeze;
         var aimPosition = position;
         var aimRotation = rotation;
         var hasAimPose = false;
@@ -204,6 +283,16 @@ internal static class TrackedControllers
             Shoulder = Button("shoulder"),
             Top = Button("faceButtonTop"),
             Outside = Button("faceButtonOutside"),
+            Trackpad = trackpad,
+            GripSqueeze = squeeze,
+            GripForce = gripForce,
+            SwipeUp = swipe == TrackpadSwipeDirection.Up,
+            SwipeDown = swipe == TrackpadSwipeDirection.Down,
+            HasTrackpadAxis = hasPad && trackpadTouch,
+            TrackpadAxis = hasPad && trackpadTouch ? pad : Vector2.zero,
+            TrackpadScroll = profile == ControllerHardwareProfile.Index ? Swipes[handIndex].Scroll : 0,
+            HasFingers = hasFingers,
+            Fingers = fingers,
             NativeFrame = nativeFrame,
             Profile = profile,
             HasThumbTouch = hasStickTouch || hasButtonTouch || hasRestTouch,
@@ -214,7 +303,9 @@ internal static class TrackedControllers
             SecondaryTouched = secondaryTouch,
             TopTouched = topTouch,
             OutsideTouched = outsideTouch,
-            ThumbrestTouched = restTouch,
+            // The Index thumb rests on its trackpad; there is no separate thumbrest.
+            ThumbrestTouched = restTouch || trackpadTouch,
+            TrackpadTouched = trackpadTouch,
             TriggerTouched = triggerTouch,
             GripTouched = Button("gripTouched"),
             Position = MapPosition(position),

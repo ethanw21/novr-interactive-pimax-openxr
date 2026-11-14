@@ -7,11 +7,34 @@ namespace NOVR.VrUi;
 // These ordered banks keep the original artwork clear and leaders uncrossed.
 internal static class ControllerDiagramLayout
 {
-    internal static Vector2 Position(bool frame, bool left, ControllerButton? button)
+    internal static Vector2 Position(ControllerBindingProfile profile, bool left, ControllerButton? button)
     {
         bool columnLeft;
         float y;
-        if (frame)
+        if (profile == ControllerBindingProfile.Index)
+        {
+            // Same sides as Touch. The trackpad sits between the thumbstick and
+            // A/B, nearer the buttons, so its callouts share their column. They
+            // are ordered so that no leader crosses another: the swipe callouts
+            // reach the pad's ends above B and below A, and the press reaches
+            // its middle between them. Grip and Squeeze join that column too,
+            // away from the strap drawn on the outside.
+            var thumbstickSide = button is ControllerButton.Trigger or ControllerButton.StickClick or ControllerButton.Menu;
+            columnLeft = thumbstickSide ? left : !left;
+            y = button switch
+            {
+                ControllerButton.Trigger or ControllerButton.TrackpadUp => 124,
+                ControllerButton.Secondary => 82,
+                ControllerButton.StickClick => 68,
+                ControllerButton.Trackpad => 40,
+                ControllerButton.Menu => 12,
+                ControllerButton.Primary => -2,
+                ControllerButton.TrackpadDown => -44,
+                ControllerButton.GripSqueeze => -128,
+                _ => -86
+            };
+        }
+        else if (profile == ControllerBindingProfile.Frame)
         {
             columnLeft = left ? button is ControllerButton.Top or ControllerButton.Outside or ControllerButton.Primary :
                 button == null || button is ControllerButton.Menu or ControllerButton.Secondary or ControllerButton.StickClick;

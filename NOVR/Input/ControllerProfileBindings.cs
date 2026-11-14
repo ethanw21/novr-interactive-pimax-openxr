@@ -6,10 +6,17 @@ namespace NOVR.MotionControls;
 public sealed class ControllerBindings
 {
     internal readonly ConfigEntry<ControllerBindingProfile> Profile;
-    private readonly Bank _frame, _touch;
+    internal readonly ConfigEntry<float> TrackpadPressForce, GripSqueezeForce, TrackpadSwipeDistance;
+    internal readonly ConfigEntry<bool> FingerTracking;
+    private readonly Bank _frame, _touch, _index;
     private ControllerBindingProfile _lastEffective;
     private int _changeVersion;
-    private Bank Active => EffectiveProfile == ControllerBindingProfile.Touch ? _touch : _frame;
+    private Bank Active => EffectiveProfile switch
+    {
+        ControllerBindingProfile.Touch => _touch,
+        ControllerBindingProfile.Index => _index,
+        _ => _frame
+    };
     private ControllerBindingBank Values => Active.Values;
     public ConfigEntry<bool> PointerEnabled => Values.PointerEnabled;
     public ConfigEntry<bool> CombatEnabled => Values.CombatEnabled;
@@ -30,11 +37,34 @@ public sealed class ControllerBindings
     public ControllerBindings(ConfigFile config)
     {
         Profile = config.Bind("VR Controller Bindings", "Controller Profile", ControllerBindingProfile.Auto,
-            "Auto uses the detected controller family. Frame and Touch keep independent saved bindings; switching profiles never overwrites either layout.");
+            "Auto uses the detected controller family. Frame, Touch and Index keep independent saved bindings; switching profiles never overwrites another layout.");
         Profile.SettingChanged += (_, _) => Changed();
         _frame = new Bank(config, ControllerBindingProfile.Frame, Changed);
         _touch = new Bank(config, ControllerBindingProfile.Touch, Changed);
+        _index = new Bank(config, ControllerBindingProfile.Index, Changed);
+        // OpenXR gives the Index trackpad a force value and no click, so the
+        // press point is ours to choose. Runtimes may scale force differently.
+        TrackpadPressForce = config.Bind(IndexSection, "Trackpad Press Force", TrackedControllers.DefaultTrackpadPressForce,
+            new ConfigDescription("How hard the Valve Index trackpad must be pressed to count as a button, as a fraction of full force. Lower if a press is not registered; raise if resting your thumb triggers it.",
+                new AcceptableValueRange<float>(.1f, 1f)));
+        TrackpadPressForce.SettingChanged += (_, _) => TrackedControllers.TrackpadPressForce = TrackpadPressForce.Value;
+        TrackedControllers.TrackpadPressForce = TrackpadPressForce.Value;
+        GripSqueezeForce = config.Bind(IndexSection, "Grip Squeeze Force", TrackedControllers.DefaultGripSqueezeForce,
+            new ConfigDescription("How hard the Valve Index grip must be squeezed for the Grip squeeze input, as a fraction of full force. Holding a handle needs no force; this is the extra squeeze on top. Lower if a squeeze is not registered; raise if holding a handle triggers it.",
+                new AcceptableValueRange<float>(.1f, 1f)));
+        GripSqueezeForce.SettingChanged += (_, _) => TrackedControllers.GripSqueezeForce = GripSqueezeForce.Value;
+        TrackedControllers.GripSqueezeForce = GripSqueezeForce.Value;
+        TrackpadSwipeDistance = config.Bind(IndexSection, "Trackpad Swipe Distance", TrackpadSwipe.DefaultDistance,
+            new ConfigDescription("How far the thumb must travel along the Valve Index trackpad, within a third of a second, to count as a swipe. The whole pad is 2. Lower if swipes are missed; raise if moving your thumb triggers them.",
+                new AcceptableValueRange<float>(TrackpadSwipe.MinDistance, TrackpadSwipe.MaxDistance)));
+        TrackpadSwipeDistance.SettingChanged += (_, _) => TrackedControllers.TrackpadSwipeDistance = TrackpadSwipeDistance.Value;
+        TrackedControllers.TrackpadSwipeDistance = TrackpadSwipeDistance.Value;
+        FingerTracking = config.Bind(IndexSection, "Finger Tracking", true,
+            "Curl each finger of the glove from the OpenXR runtime's hand tracking when Valve Index controllers are in use. Visual only. Needs a runtime that offers XR_EXT_hand_tracking; without it the glove follows grip and trigger as before. Turning it off applies at once; turning it on applies the next time the game starts.");
+        FingerTracking.SettingChanged += (_, _) => TrackedControllers.FingerTracking = FingerTracking.Value;
+        TrackedControllers.FingerTracking = FingerTracking.Value;
     }
+    private const string IndexSection = "VR Controller Bindings - Index";
     private void Changed()
     {
         unchecked
@@ -52,8 +82,10 @@ public sealed class ControllerBindings
                 var left = TrackedControllers.Profile(true);
                 var right = TrackedControllers.Profile(false);
                 effective = left == ControllerHardwareProfile.SteamFrame || right == ControllerHardwareProfile.SteamFrame ? ControllerBindingProfile.Frame :
+                    left == ControllerHardwareProfile.Index || right == ControllerHardwareProfile.Index ? ControllerBindingProfile.Index :
                     left == ControllerHardwareProfile.Touch || right == ControllerHardwareProfile.Touch || left == ControllerHardwareProfile.Other || right == ControllerHardwareProfile.Other
-                        ? ControllerBindingProfile.Touch : _lastEffective == ControllerBindingProfile.Touch ? ControllerBindingProfile.Touch : ControllerBindingProfile.Frame;
+                        ? ControllerBindingProfile.Touch
+                        : _lastEffective == ControllerBindingProfile.Touch || _lastEffective == ControllerBindingProfile.Index ? _lastEffective : ControllerBindingProfile.Frame;
             }
             if (_lastEffective != effective)
             {
@@ -127,6 +159,7 @@ public sealed class ControllerBindings
         ControllerHardwareProfile.SteamFrame => ControllerBindingProfile.Frame,
         ControllerHardwareProfile.Touch => ControllerBindingProfile.Touch,
         ControllerHardwareProfile.Other => ControllerBindingProfile.Touch,
+        ControllerHardwareProfile.Index => ControllerBindingProfile.Index,
         _ => EffectiveProfile
     };
     internal bool IsButtonAvailable(ControllerActionBinding binding, bool leftHanded)
@@ -184,8 +217,9 @@ public sealed class ControllerBindings
         internal Bank(ConfigFile config, ControllerBindingProfile profile, System.Action changed)
         {
             _profile = profile;
-            var section = profile == ControllerBindingProfile.Touch ? "VR Controller Bindings - Touch" : "VR Controller Bindings";
-            Values = new ControllerBindingBank(config, section, profile == ControllerBindingProfile.Touch);
+            var index = profile == ControllerBindingProfile.Index;
+            var section = index ? IndexSection : profile == ControllerBindingProfile.Touch ? "VR Controller Bindings - Touch" : "VR Controller Bindings";
+            Values = new ControllerBindingBank(config, section, index || profile == ControllerBindingProfile.Touch, index);
             void Watch<T>(ConfigEntry<T> entry) => entry.SettingChanged += (_, _) => changed();
             Watch(Values.PointerEnabled);
             Watch(Values.CombatEnabled);

@@ -78,6 +78,18 @@ internal static class ActivityChecks
                     if (button != ControllerButton.Primary)
                         check(ControllerDiagramActivity.Read(touch, ControllerButton.Primary, left, frame) == ControllerDiagramInput.None, "Touching another physical control never lights the primary button");
                 }
+        foreach (var left in new[] { true, false })
+        {
+            check(ControllerDiagramActivity.Read(new ControllerSample { Valid = true, Trackpad = true, TrackpadTouched = true }, ControllerButton.Trackpad, left, false) == ControllerDiagramInput.Press,
+                "Index trackpad press lights its own callout");
+            check(ControllerDiagramActivity.Read(new ControllerSample { Valid = true, TrackpadTouched = true }, ControllerButton.Trackpad, left, false) == ControllerDiagramInput.Touch,
+                "A resting thumb shows trackpad touch, not a press");
+            check(ControllerDiagramActivity.Read(new ControllerSample { Valid = false, Trackpad = true }, ControllerButton.Trackpad, left, false) == ControllerDiagramInput.None,
+                "Tracking loss clears a trackpad press");
+            foreach (var other in new ControllerButton?[] { null, ControllerButton.Primary, ControllerButton.Secondary, ControllerButton.Menu, ControllerButton.StickClick, ControllerButton.Trigger })
+                check(ControllerDiagramActivity.Read(new ControllerSample { Valid = true, Trackpad = true, TrackpadTouched = true }, other, left, false) == ControllerDiagramInput.None,
+                    "Trackpad activity never lights another control");
+        }
         var both = new ControllerSample { Valid = true, Primary = true, PrimaryTouched = true };
         check(ControllerDiagramActivity.Read(both, ControllerButton.Primary, false, false) == ControllerDiagramInput.Press, "Press takes precedence over touch on the same control");
         check(ControllerDiagramActivity.Read(new ControllerSample { Valid = true, Trigger = .001f, Grip = .001f }, null, true, true) == ControllerDiagramInput.None, "Tiny analog idle noise does not light grip");

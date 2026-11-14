@@ -15,9 +15,11 @@ internal static class FreeHandPose
     private static Quaternion Fallback(ControllerSample sample)
     {
         // Installed SteamVR controller definitions: openxr_grip -> openxr_aim.
+        // Index uses the open-source PimaxXR runtime's offsets for that
+        // controller (grip +20 degrees, aim -40 degrees from the tracked pose).
         // Keep unknown hardware's existing grip convention rather than guessing.
         var pitch = sample.Profile == ControllerHardwareProfile.SteamFrame ? 42.8091f
-            : sample.Profile == ControllerHardwareProfile.Touch ? 60f : 0f;
+            : sample.Profile is ControllerHardwareProfile.Touch or ControllerHardwareProfile.Index ? 60f : 0f;
         return sample.Rotation * Quaternion.Euler(pitch, 0, 0);
     }
 

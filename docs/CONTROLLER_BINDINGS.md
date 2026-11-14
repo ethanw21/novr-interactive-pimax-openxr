@@ -8,25 +8,25 @@ The virtual stick and throttle work across aircraft. Original instrument display
 
 Flight buttons require the assigned handle held or toggle-latched. Target selection and cycling happen on button release. Guns and countermeasures are held actions.
 
-| Action | Steam Frame | Touch / Quest |
-| --- | --- | --- |
-| Guns | Right trigger | Right trigger |
-| Selected missile / bomb release | A | A |
-| Select target nearest cue | Right thumbstick click | Right thumbstick click |
-| Unselect latest target | B | B |
-| Next weapon | Y on stick hand | Y on throttle hand |
-| Countermeasures | Left D-pad down | X |
-| Wheel / air brake | Left trigger | Left trigger |
-| Next countermeasure type | Left D-pad right | Left thumbstick click |
-| Clear all targets | View → Flight actions | View → Flight actions |
-| Native option wheel, free hand | Thumbstick click | Thumbstick click |
-| Tactical map | B with stick released | B with stick released |
-| View menu | Left View, or wheel → VR MENU | Physical left Menu, or wheel → VR MENU |
-| Reopen menu during Edit layout | Either thumbstick click | Either thumbstick click |
+| Action | Steam Frame | Touch / Quest | Valve Index |
+| --- | --- | --- | --- |
+| Guns | Right trigger | Right trigger | Right trigger |
+| Selected missile / bomb release | A | A | Right A |
+| Select target nearest cue | Right thumbstick click | Right thumbstick click | Right thumbstick click |
+| Unselect latest target | B | B | Right B |
+| Next weapon | Y on stick hand | Y on throttle hand | Left B |
+| Countermeasures | Left D-pad down | X | Left A |
+| Wheel / air brake | Left trigger | Left trigger | Left trigger |
+| Next countermeasure type | Left D-pad right | Left thumbstick click | Left thumbstick click |
+| Clear all targets | View → Flight actions | View → Flight actions | View → Flight actions |
+| Native option wheel, free hand | Thumbstick click | Thumbstick click | Thumbstick click |
+| Tactical map | B with stick released | B with stick released | Right B with stick released |
+| View menu | Left View, or wheel → VR MENU | Physical left Menu, or wheel → VR MENU | Left trackpad press, or wheel → VR MENU |
+| Reopen menu during Edit layout | Either thumbstick click | Either thumbstick click | Either thumbstick click |
 
 The map remains available after a crash; View opens the recovery map outside a usable cockpit. F9 is the keyboard fallback. Grip, trigger pointer clicks, thumbstick yaw and throttle auxiliary axes retain their existing behavior.
 
-With left-handed HOTAS, role-based actions follow the stick or throttle. The physical left Menu stays the menu button on Touch; its right system button is reserved by the runtime. The guide shows the actual button names for your handedness.
+With left-handed HOTAS, role-based actions follow the stick or throttle. The physical left Menu stays the menu button on Touch; its right system button is reserved by the runtime. On Index, View stays on the physical left trackpad. The guide shows the actual button names for your handedness.
 
 ## Edit in the headset
 
@@ -47,7 +47,7 @@ obstructs your view. New settings start enabled at **25 cm**, adjustable from
 seat meshes are affected; glass and unsupported cockpit models remain unchanged.
 
 1. Open **View → Controller bindings** or **Settings → Controls → Visual VR Controller Bindings → OPEN**. Choose Left or Right, then select a callout beside the controller image to inspect its assignments, or use the action groups below.
-2. Leave **Preset: Auto** for detection, or select Frame / Touch explicitly. Each keeps its own saved bindings.
+2. Leave **Preset: Auto** for detection, or select Frame / Touch / Index explicitly. Each keeps its own saved bindings.
 3. Choose **Weapons & targets**, **Flight & defense**, or **Menu & map**.
 4. Choose an action, select its hand and button, then **Save binding**. You can select the stick/throttle role or a fixed left/right hand. Unsupported buttons are disabled.
 5. If the button is already used, choose another or explicitly replace the listed assignments. Cancel leaves your saved binding intact.
@@ -55,11 +55,28 @@ seat meshes are affected; glass and unsupported cockpit models remain unchanged.
 
 Map may share a flight button because it yields to a held handle. View requires its own button. Free-hand thumbstick click is reserved for the wheel; it remains assignable to held-handle actions. Gear, radar, flight assist, and hover assist may also be assigned; they start unassigned. Grip and flight axes stay under **View → Flight controls**, separate from button bindings. **Restore defaults** changes only the selected controller preset after confirmation.
 
-Existing Frame custom bindings are retained. Switching between controller families does not overwrite either saved layout. Standard Touch and its Plus/Pro variants have input-profile support; new hardware still needs a real headset check. Trackpad-only Vive layouts and controller-free hand tracking are not covered by this preset.
+Existing Frame and Touch custom bindings are retained. Switching between controller families does not overwrite any saved layout. Standard Touch and its Plus/Pro variants have input-profile support; new hardware still needs a real headset check. Trackpad-only Vive layouts and controller-free hand tracking are not covered by these presets.
+
+## Valve Index controllers
+
+Index controllers are detected from their OpenXR interaction profile, on any headset and runtime that reports it. **Preset: Auto** then selects **Valve Index**, with its own artwork, button names and saved bindings. Until this preset existed they fell back to the Touch layout, so bindings saved under Touch are not carried over; the Index preset starts from its defaults above.
+
+- **A / B** exist on both hands and are named that way. The defaults follow the Touch layout: left A and B take the place of X and Y.
+- **System buttons** belong to the VR runtime and cannot be bound. View therefore defaults to a **left trackpad press**; wheel → VR MENU also opens it.
+- **Trackpad press** is a button on either hand and can be assigned to any action. The trackpad has no click switch, so NOVR reads its force sensor: a press registers at 40% of full force and releases below 30%. Change **Trackpad Press Force** (0.1–1) under `VR Controller Bindings - Index` in `BepInEx/config/deltawing.novr.cfg`: lower it if a press is not registered, raise it if a resting thumb triggers it. Touching the trackpad without pressing counts as a thumb rest, not a button.
+- **Grip** uses the controller's squeeze value. A handle is taken when your grip closes, so with strapped-on controllers open your hand, reach the handle and close it. In Hold mode, opening your hand lets go; **Toggle** under **View → Flight controls** keeps the handle until the next squeeze.
+- **Grip squeeze** is a second button on each grip, read from its force sensor. It registers when you squeeze harder than a normal hold, at 50% of full force, and releases below three quarters of that. It can be assigned to any flight or weapon action; it cannot open View or the map, so a tight grip on a handle never opens a menu. Change **Grip Squeeze Force** (0.1–1) in the same config section.
+- **Trackpad swipe up / swipe down** are two more buttons on each trackpad. Slide your thumb quickly along the pad, toward the top of the controller or toward your palm. A swipe is one short press: each touch gives one swipe, so lift your thumb before the next. A slow drag, a resting thumb, a sideways slide and a firm press are not swipes. **Trackpad Swipe Distance** (0.3–1.5, default 0.7, where 2 is the whole pad) sets how far the thumb must travel within 0.3 s.
+- **Menu scrolling:** with a menu open, sliding your thumb on the pointing hand's trackpad scrolls lists, as the thumbstick does. The list follows your thumb.
+- **Finger tracking:** when the OpenXR runtime offers `XR_EXT_hand_tracking` for controllers, the glove's index, middle, ring and little fingers each follow your own finger. Pointing, pinching and holding a cockpit control keep their fitted poses, and the thumb still follows what it touches. A runtime without that extension changes nothing: the fingers follow grip and trigger as before. `Player.log` says which applies in lines starting `[NOVR] Finger tracking:`. Set **Finger Tracking** to `false` in the same config section to switch it off; switching it back on takes effect at the next game start.
+
+Grip squeeze and the swipes start unassigned. The controller diagram shows them as **Squeeze**, **Swipe ↑** and **Swipe ↓**, and they light while you use them: amber when your thumb is on that end of the pad or the grip feels any force, green when the input registers.
+
+This preset is covered by the portable input, binding, diagram and glove checks. The calls into the runtime's hand tracking have no portable check. None of it has been confirmed on real hardware yet, including on Pimax's OpenXR runtime: force levels, swipe feel and whether a given runtime reports finger data for Index controllers all need a headset. Please report the headset, runtime and what you pressed if a control does not respond.
 
 ## Hand option wheel
 
-Outside a cockpit, the wheel offers **VR MENU**, **GAME MENU** and **OPEN MAP / CLOSE MAP**. The default **B** binding on Frame and Quest also opens/closes the map while spectating; closing keeps your current target. Map controls remain available when the controller pointer is disabled.
+Outside a cockpit, the wheel offers **VR MENU**, **GAME MENU** and **OPEN MAP / CLOSE MAP**. The default **B** binding on Frame, Quest and Index also opens/closes the map while spectating; closing keeps your current target. Map controls remain available when the controller pointer is disabled.
 
 Release that hand’s flight handle, then click its thumbstick. The game wheel sits just above the thumbstick, tilted 25° toward the pilot for readability. It stays fixed to the controller as you move your hand. Deflect the stick to highlight an option and return it to center to select. Clicking again closes without selecting, including while an option is highlighted. Trigger switches between the native Options and Weapons pages; recenter before choosing on the new page. The opposite hand can keep flying. **GAME MENU** opens the game's menu; **VR MENU** opens NOVR settings without needing the physical Menu button, which Steam Link may consume on Quest.
 

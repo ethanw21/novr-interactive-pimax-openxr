@@ -45,8 +45,8 @@ this repository, rejecting missing resource globs and binary dependencies.
 | Area | Coverage |
 | --- | --- |
 | Core and lifecycle | Flight-control math, input ownership, detents, ejection rules, complete configuration publication, XR enable/disable and retry, camera discovery/ownership, API event subscriptions, canvas-camera rebinding, paused/reentrant UI attachment and UI open/close ownership |
-| Controllers and menus | Steam Frame/Touch input mapping, Proton controller compatibility, pointer ownership and slider drag capture, binding validation and persistence, native Rewired map/axis-slot discovery, controller artwork/callouts/activity, View settings, binding editor, hand option wheel, native-menu handoff and recenter cancellation, native settings save/apply ordering, virtual-mouse binding ownership/restoration, lobby filtering/sorting and stable selection/password routing, deferred host ownership, and Workshop query/preview lifetime |
-| Hands and feedback | Glove poses and finger transitions, tracking resets, elbow/wrist alignment, sleeve reach/bounds/geometry and resource lifetime, texture preparation/ownership and initialization failure cleanup, UI-depth restoration and feedback dispatch |
+| Controllers and menus | Steam Frame/Touch/Index input mapping, Index trackpad press, grip squeeze and swipe detection, trackpad menu scrolling, Proton controller compatibility, pointer ownership and slider drag capture, binding validation and persistence, native Rewired map/axis-slot discovery, controller artwork/callouts/activity, View settings, binding editor, hand option wheel, native-menu handoff and recenter cancellation, native settings save/apply ordering, virtual-mouse binding ownership/restoration, lobby filtering/sorting and stable selection/password routing, deferred host ownership, and Workshop query/preview lifetime |
+| Hands and feedback | Glove poses and finger transitions, per-finger curl from OpenXR hand joints and its fallback, tracking resets, elbow/wrist alignment, sleeve reach/bounds/geometry and resource lifetime, texture preparation/ownership and initialization failure cleanup, UI-depth restoration and feedback dispatch |
 | HUD widgets | Per-aircraft layout slots, migration, saved placement, combined edit-session save/cancel/context transitions, corner acquisition, resizing/rotation, two-hand appearance-control highlights, borrowing/restoring native status sources, native notification refresh/expiry, duplicate-feed ownership, unchanged threat refresh and depth handling |
 | Map and flight cues | Minimap borrowing, terrain changes/tint/restoration, map interaction, redundant coordinate suppression, cue-aligned nearest-angle target selection, live cue-offset changes, selected-target exclusions, native selection handoff, nozzle/collective visibility, threat-vector bounds, delayed pitch-ladder setup and native runway endpoints |
 | Startup and installer | D3D11 launch argument/environment preservation, one-time handoff and parent-exit safety, flat/headless bypass, mission-content readiness, splash progress, managed XR payload upgrades under preloader file locks, release selection, package validation, replacement/rollback, shared install/uninstall locks, stale-version rejection after transaction recovery, picker ownership/failure handling, destination capture and settings preservation |
@@ -89,6 +89,17 @@ publication opt-in, version matching, package metadata/checksums and rejection
 without overwriting a previous package.
 It records the installer's child publication commands instead of executing them.
 It never builds or installs the runtime mod or needs game/native binaries.
+
+`.github/workflows/build-mod.yml` is the only workflow that builds the runtime
+mod. It runs for each pushed commit and on manual dispatch. The mod compiles
+against the game's managed assemblies, so the job downloads the Nuclear Option
+Dedicated Server with anonymous SteamCMD and uses its `Managed` assemblies as
+compile-time references. They are never committed, cached or uploaded, and the
+job fails if any of them appears in the package. It then runs the documented
+`NOVR.Build` package command and uploads the unpacked package as one artifact
+named `NOVR-<version>-<commit>`, with the layout of `NOVR.zip`. The optional
+native foveation backend is not built. A passing run shows that the source
+compiles against the server's assemblies. It does not start the game or the mod.
 
 A passing Linux run does not prove Windows passed; both matrix results need to
 be checked in GitHub Actions. Local test output cannot establish that a hosted

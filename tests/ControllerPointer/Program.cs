@@ -149,9 +149,31 @@ foreach (var loss in new[] { "hidden", "disabled", "noninteractable", "destroyed
     Check(s.Pointer.Ray.origin.x < 0, "Menu/focus cancellation retains the last deliberately selected hand");
 }
 
+// Sliding a thumb along an Index trackpad drags a list like a touch screen:
+// up moves the content up, which is a downward wheel step.
+{
+    var s = new Scene();
+    s.Frame(0);
+    Check(s.Pointer.Scroll.y == 0, "A still thumb does not scroll");
+    s.Right.TrackpadScroll = .5f;
+    s.Frame(0);
+    Check(Math.Abs(s.Pointer.Scroll.y + 1.5f) < .0001f, "Thumb travel up the trackpad scrolls the content up");
+    s.Right.TrackpadScroll = -1f;
+    s.Frame(0);
+    Check(Math.Abs(s.Pointer.Scroll.y - 3f) < .0001f, "Thumb travel down the trackpad scrolls the content down");
+    s.Right.TrackpadScroll = float.NaN;
+    s.Frame(0);
+    Check(s.Pointer.Scroll.y == 0, "Invalid trackpad travel never scrolls");
+    s.Right.TrackpadScroll = 0;
+    s.Left.TrackpadScroll = 1;
+    s.Frame(0);
+    Check(s.Pointer.Scroll.y == 0, "Only the pointing hand's trackpad scrolls");
+}
+
 // Every sampled physical button participates, including Frame's extra face
-// buttons; contact-only sensors and thumbstick motion are intentionally absent.
-foreach (var button in new[] { "Primary", "Secondary", "Menu", "Shoulder", "Top", "Outside", "StickClick", "Grip", "Trigger" })
+// buttons and an Index trackpad press; contact-only sensors and thumbstick
+// motion are intentionally absent.
+foreach (var button in new[] { "Primary", "Secondary", "Menu", "Shoulder", "Top", "Outside", "StickClick", "Trackpad", "Grip", "Trigger" })
 {
     var s = new Scene();
     s.EnableLeft();

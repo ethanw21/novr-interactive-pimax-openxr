@@ -25,7 +25,7 @@ try
         "Frame exposes D-pad/extra face buttons and bumpers");
     CheckArtwork();
     var previews = new List<object>();
-    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
     {
         bindings.Profile.Value = profile;
         panel.Refresh();
@@ -39,6 +39,82 @@ try
     }
     if (args.Length > 0)
         File.WriteAllText(args[0], System.Text.Json.JsonSerializer.Serialize(previews, new System.Text.Json.JsonSerializerOptions { WriteIndented = true }));
+
+    // Index: the same shared page, with its own artwork, labels and trackpad callout.
+    Check(bindings.EffectiveProfile == ControllerBindingProfile.Index, "Index preset can be chosen without Index hardware connected");
+    Check(Texts("CONTROLLER DIAGRAM").Count(t => t.Contains("Valve Index")) == 2, "Both hand tabs name the Index preset");
+    foreach (var hand in new[] { "Left controller", "Right controller" })
+    {
+        Tab(hand == "Left controller").GetComponent<Button>().onClick.Invoke();
+        panel.Refresh();
+        Check(Control(hand, "Trackpad").activeSelf && !Control(hand, "Top").activeSelf && !Control(hand, "Outside").activeSelf && !Control(hand, "Shoulder").activeSelf,
+            "Index shows its trackpad and hides Frame-only controls");
+        Check(!Control(hand, "Menu").GetComponent<Button>().interactable && Label(hand, "Menu", "System") && Label(hand, "Menu", "Headset only"),
+            "Both Index system buttons are clearly unavailable");
+        Check(Label(hand, "Primary", "A") && Label(hand, "Secondary", "B") && Label(hand, "Trackpad", "Trackpad"), "Index face buttons read A/B on both hands");
+        Check(Control(hand, "TrackpadUp").activeSelf && Control(hand, "TrackpadDown").activeSelf && Control(hand, "GripSqueeze").activeSelf,
+            "Index shows its swipe and squeeze callouts");
+        Check(Label(hand, "TrackpadUp", "Swipe ↑") && Label(hand, "TrackpadDown", "Swipe ↓") && Label(hand, "GripSqueeze", "Squeeze"), "Index extras are named on the diagram");
+        Check(Label(hand, "TrackpadUp", "Unassigned") && Label(hand, "TrackpadDown", "Unassigned") && Label(hand, "GripSqueeze", "Unassigned"), "Index extras start unassigned");
+        // No two callouts on one side overlap, and every leader stays uncrossed.
+        var callouts = new[] { "Trackpad", "TrackpadUp", "TrackpadDown", "GripSqueeze", "Grip", "Primary", "Secondary", "Trigger", "StickClick", "Menu" }
+            .Select(name => ((RectTransform)Control(hand, name).transform).anchoredPosition).ToArray();
+        for (var a = 0; a < callouts.Length; a++)
+            for (var b = a + 1; b < callouts.Length; b++)
+                Check(callouts[a].x != callouts[b].x || Math.Abs(callouts[a].y - callouts[b].y) >= 38, "Two Index callouts overlap");
+    }
+    Check(Label("Left controller", "Trackpad", "View") && Label("Right controller", "Trackpad", "Unassigned"), "View starts on the left trackpad; the right one is free");
+    ClickControl("Left controller", "Trackpad");
+    Check(Page("CONTROLLER BUTTON").activeInHierarchy && Texts("CONTROLLER BUTTON").Any(t => t.Contains("LEFT · Trackpad press") && t.Contains("View menu · any grip")),
+        "Selecting the left Index trackpad displays its View assignment");
+    Click("Back");
+    TrackedControllers.LeftSample = new ControllerSample { Valid = true, TrackpadTouched = true };
+    Tab(true).GetComponent<Button>().onClick.Invoke();
+    panel.Refresh();
+    Check(Ring("Left controller", "Trackpad").enabled && Ring("Left controller", "Trackpad").color.r == 1, "A resting thumb shows amber on the trackpad callout");
+    TrackedControllers.LeftSample = new ControllerSample { Valid = true, Trackpad = true, TrackpadTouched = true };
+    panel.Refresh();
+    Check(Ring("Left controller", "Trackpad").color.g > .8f && !Ring("Left controller", "Menu").enabled, "A trackpad press shows green and never lights the system button");
+    // Swipes flash green as a tap; amber follows the thumb along the pad.
+    TrackedControllers.LeftSample = new ControllerSample { Valid = true, TrackpadTouched = true, HasTrackpadAxis = true, TrackpadAxis = new Vector2(0, .8f) };
+    panel.Refresh();
+    Check(Ring("Left controller", "TrackpadUp").enabled && Ring("Left controller", "TrackpadUp").color.r == 1 && !Ring("Left controller", "TrackpadDown").enabled,
+        "A thumb high on the pad shows amber on the swipe up callout only");
+    TrackedControllers.LeftSample = new ControllerSample { Valid = true, TrackpadTouched = true, HasTrackpadAxis = true, TrackpadAxis = new Vector2(0, -.8f), SwipeDown = true };
+    panel.Refresh();
+    Check(Ring("Left controller", "TrackpadDown").color.g > .8f && !Ring("Left controller", "TrackpadUp").enabled, "A swipe down shows green on its own callout");
+    TrackedControllers.LeftSample = new ControllerSample { Valid = true, Grip = 1, GripForce = .2f };
+    panel.Refresh();
+    Check(Ring("Left controller", "GripSqueeze").enabled && Ring("Left controller", "GripSqueeze").color.r == 1 && Ring("Left controller", "Grip").color.g > .8f,
+        "Light force on a closed hand shows amber on Squeeze while Grip is green");
+    TrackedControllers.LeftSample = new ControllerSample { Valid = true, Grip = 1, GripForce = .9f, GripSqueeze = true };
+    panel.Refresh();
+    Check(Ring("Left controller", "GripSqueeze").color.g > .8f, "A firm squeeze shows green");
+    TrackedControllers.LeftSample = default;
+    panel.Refresh();
+    ClickControl("Left controller", "GripSqueeze");
+    Check(Page("CONTROLLER BUTTON").activeInHierarchy && Texts("CONTROLLER BUTTON").Any(t => t.Contains("LEFT · Grip squeeze") && t.Contains("Unassigned")),
+        "Selecting Squeeze opens it for assignment");
+    Check(FindButton("Assign · Guns").interactable, "Squeeze can be given a flight action");
+    Click("More actions");
+    Check(!FindButton("Assign · View menu").interactable && !FindButton("Assign · Map / respawn").interactable, "Squeeze cannot be given View or the map");
+    Click("Back");
+    Click("Bindings");
+    Check(Texts("CONTROLLER BINDINGS").Any(t => t.Contains("Active: Valve Index")), "Bindings page names the active Index preset");
+    Click("Menu & map");
+    Click("View menu\nL · Trackpad press");
+    Check(Page("EDIT BINDING").activeInHierarchy && FindButton("✓ Trackpad press").interactable, "Index editor offers the trackpad and marks the current choice");
+    Check(!FindButton("Unavailable (system button)").interactable && FindButton("A").interactable && FindButton("B").interactable,
+        "Index editor disables the system button and names the face buttons A/B");
+    Check(FindButton("Trackpad swipe up").interactable && FindButton("Trackpad swipe down").interactable && !FindButton("Grip squeeze").interactable,
+        "Index editor offers swipes for View and reserves the squeeze");
+    Check(ExtraChoices() == 3, "Index editor shows its extra row of choices");
+    Click("Cancel");
+    Click("Bindings");
+    Click("Preset: Index");
+    Check(bindings.Profile.Value == ControllerBindingProfile.Auto, "Preset button cycles through Index and back to Auto");
+    Click("Visual controller diagram");
+
     bindings.Profile.Value = ControllerBindingProfile.Frame;
     panel.Refresh();
     ActivityChecks.Run(Check);
@@ -73,7 +149,7 @@ try
     if (args.Length > 0)
     {
         var livePreviews = new List<object>();
-        foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch })
+        foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
         {
             bindings.Profile.Value = profile;
             Tab(false).GetComponent<Button>().onClick.Invoke();
@@ -94,6 +170,7 @@ try
         "Selecting physical A displays its real gripped assignment");
     Click("Edit · Missile / weapon release");
     Check(Page("EDIT BINDING").activeInHierarchy && Texts("EDIT BINDING").Any(t => t.Contains("R · A")), "Physical selection prefills existing shared edit page");
+    Check(ExtraChoices() == 0, "Other presets do not show Index's extra row of choices");
     Click("Cancel");
     Check(Page("CONTROLLER BUTTON").activeInHierarchy && bindings.Get(ControllerActionId.WeaponRelease).Hand == ControllerHandRole.Stick,
         "Cancel returns to button details without changing role or bindings");
@@ -178,7 +255,11 @@ try
     Console.WriteLine($"Controller diagram UI checks passed: {checks} assertions (actual shared UI callbacks and BepInEx binding persistence; Unity UI doubles, no rendering).");
 
     GameObject Page(string name) => GameObject.All.Single(g => g.name == name && Within(g, host));
+    // Buttons on the editor's fourth row of choices, below the nine shared ones.
+    int ExtraChoices() => GameObject.All.Count(g => Within(g, Page("EDIT BINDING")) && g.activeInHierarchy && g.Has<Button>() &&
+        ((RectTransform)g.transform).anchoredPosition.y == 177 - 4 * 57);
     GameObject Control(string hand, string name) => GameObject.All.Single(g => g.name == name && g.transform.parent?.gameObject.name == hand && Within(g, host));
+    bool Label(string hand, string name, string text) => Control(hand, name).transform.children.Any(t => t.gameObject.Has<Text>() && t.gameObject.GetComponent<Text>().text == text);
     IEnumerable<string> Texts(string page) => GameObject.All.Where(g => Within(g, Page(page)) && g.activeInHierarchy && g.Has<Text>()).Select(g => g.GetComponent<Text>().text);
     Button FindButton(string text) => GameObject.All.Where(g => Within(g, host) && g.activeInHierarchy && g.Has<Button>()).Single(g =>
         g.transform.children.Any(t => t.gameObject.Has<Text>() && t.gameObject.GetComponent<Text>().text == text)).GetComponent<Button>();
@@ -225,8 +306,10 @@ try
         }
         if (images.Length > 1)
             Check(Separate(Bounds(images[0], page), Bounds(images[1], page)), "Main and trigger views do not overlap");
-        if (bindings.EffectiveProfile == ControllerBindingProfile.Touch)
-            Check(GameObject.All.Any(g => Within(g, page) && g.activeInHierarchy && g.name == "Touch artwork light card" && g.GetComponent<Image>().color.r > .9f), "Black Touch line art has a plain light backing");
+        if (bindings.EffectiveProfile != ControllerBindingProfile.Frame)
+            Check(GameObject.All.Any(g => Within(g, page) && g.activeInHierarchy && g.name == "Touch artwork light card" && g.GetComponent<Image>().color.r > .9f), "Black Touch/Index line art has a plain light backing");
+        Check(images.All(g => g.GetComponent<RawImage>().texture!.name == (bindings.EffectiveProfile == ControllerBindingProfile.Frame ? "frame-views.png" :
+            bindings.EffectiveProfile == ControllerBindingProfile.Index ? "index-diagram.png" : "touch-diagram.png")), "Each preset shows its own controller artwork");
         var leaders = GameObject.All.Single(g => Within(g, page) && g.activeInHierarchy && g.Has<ControllerDiagramLeaders>()).GetComponent<ControllerDiagramLeaders>();
         var segments = (List<(Vector2 from, Vector2 to)>)typeof(ControllerDiagramLeaders).GetField("_segments", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!.GetValue(leaders)!;
         Check(segments.Count == controls.Length, "Each visible physical control has exactly one leader");
