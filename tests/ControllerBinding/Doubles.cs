@@ -7,13 +7,16 @@ internal static class TrackedControllers
     internal static ControllerHardwareProfile Profile(bool left) => left ? Left : Right;
     internal const float DefaultTrackpadPressForce = .4f;
     internal static float TrackpadPressForce = DefaultTrackpadPressForce;
+    internal const float DefaultGripSqueezeForce = .5f;
+    internal static float GripSqueezeForce = DefaultGripSqueezeForce, TrackpadSwipeDistance = TrackpadSwipe.DefaultDistance;
+    internal static bool FingerTracking = true;
     internal static bool Available = true;
     internal static readonly ControllerSample[] Samples = new ControllerSample[2];
     internal static ControllerSample Read(bool left) => Samples[left ? 0 : 1];
 }
 internal struct ControllerSample
 {
-    internal bool Valid, NativeFrame, Primary, Secondary, Top, Outside, StickClick, Menu, Shoulder, Trackpad;
+    internal bool Valid, NativeFrame, Primary, Secondary, Top, Outside, StickClick, Menu, Shoulder, Trackpad, GripSqueeze, SwipeUp, SwipeDown;
     internal float Trigger;
 }
 internal sealed class ModConfiguration

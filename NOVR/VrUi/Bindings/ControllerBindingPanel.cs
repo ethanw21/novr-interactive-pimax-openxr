@@ -60,7 +60,7 @@ internal sealed partial class ControllerBindingPanel
         AddButton("Leave unassigned", 1, 0, () => { _pendingBinding = new ControllerActionBinding(ControllerButton.None, _pendingBinding.Hand); RefreshBindingEditor(); });
         var choices = new[] { ControllerButton.Trigger, ControllerButton.Primary, ControllerButton.Secondary,
             ControllerButton.StickClick, ControllerButton.Shoulder, ControllerButton.Menu, ControllerButton.Top, ControllerButton.Outside,
-            ControllerButton.Trackpad };
+            ControllerButton.Trackpad, ControllerButton.TrackpadUp, ControllerButton.TrackpadDown, ControllerButton.GripSqueeze };
         for (var i = 0; i < choices.Length; i++)
         {
             var choice = choices[i];
@@ -151,8 +151,22 @@ internal sealed partial class ControllerBindingPanel
         }
         var left = ControllerBindings.ResolveLeft(_pendingBinding.Hand, StickLeft);
         var allowed = ControllerBindings.IsBindingAvailable(Bindings.ButtonProfile(left), left, _editingAction, _pendingBinding.Button);
+        // Swipes and squeeze exist only on Index, where they add a fourth row
+        // of choices. The summary moves into the space left below that row.
+        var indexHand = Bindings.ButtonProfile(left) == ControllerBindingProfile.Index;
         foreach (var item in _bindingChoices)
+        {
+            if (item.value is ControllerButton.TrackpadUp or ControllerButton.TrackpadDown or ControllerButton.GripSqueeze)
+                item.button.gameObject.SetActive(indexHand);
             item.button.interactable = ControllerBindings.IsBindingAvailable(Bindings.ButtonProfile(left), left, _editingAction, item.value);
+        }
+        if (_bindingSummary != null)
+        {
+            var summary = (RectTransform)_bindingSummary.transform;
+            summary.anchoredPosition = new Vector2(0, indexHand ? -108 : -84);
+            summary.sizeDelta = new Vector2(510, indexHand ? 60 : 112);
+            _bindingSummary.fontSize = indexHand ? 16 : 18;
+        }
         var conflicts = Bindings.GetConflicts(_editingAction, _pendingBinding, StickLeft);
         if (_bindingSave != null)
             _bindingSave.interactable = allowed;

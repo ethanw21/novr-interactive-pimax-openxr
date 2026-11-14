@@ -133,7 +133,7 @@ namespace UnityEngine.XR
         public static readonly InputFeatureUsage<InputTrackingState> trackingState = new("trackingState");
         public static readonly InputFeatureUsage<UnityEngine.Vector3> devicePosition = new("devicePosition");
         public static readonly InputFeatureUsage<UnityEngine.Quaternion> deviceRotation = new("deviceRotation");
-        public static readonly InputFeatureUsage<UnityEngine.Vector2> primary2DAxis = new("primary2DAxis");
+        public static readonly InputFeatureUsage<UnityEngine.Vector2> primary2DAxis = new("primary2DAxis"), secondary2DAxis = new("secondary2DAxis");
     }
 }
 namespace UnityEngine.XR.OpenXR.Input
@@ -182,6 +182,22 @@ namespace UnityEngine.XR.OpenXR.Features
     }
     public class OpenXRInteractionFeature : OpenXRFeature
     {
+    }
+    // Stands in for the runtime: a test supplies the joints each hand reports.
+    public class NovrHandJointsFeature : OpenXRFeature
+    {
+        public const string featureId = "handjoints", extensionStrings = "XR_EXT_hand_tracking XR_KHR_win32_convert_performance_counter_time";
+        public static readonly UnityEngine.Vector3[]?[] Hands = new UnityEngine.Vector3[]?[2];
+        public static int Reads;
+        public static bool TryGetJointPositions(bool left, UnityEngine.Vector3[] positions)
+        {
+            Reads++;
+            var source = Hands[left ? 0 : 1];
+            if (source == null)
+                return false;
+            Array.Copy(source, positions, source.Length);
+            return true;
+        }
     }
 }
 namespace UnityEngine.XR.OpenXR.Features.Interactions

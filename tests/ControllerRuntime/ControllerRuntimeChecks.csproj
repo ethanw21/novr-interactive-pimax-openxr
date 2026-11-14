@@ -9,6 +9,8 @@
   <ItemGroup>
     <Compile Include="../../NOVR/Input/TrackedControllers.cs" Link="TrackedControllers.cs" />
     <Compile Include="../../NOVR/Input/ControllerHardwareProfile.cs" Link="ControllerHardwareProfile.cs" />
+    <Compile Include="../../NOVR/Input/TrackpadSwipe.cs" Link="TrackpadSwipe.cs" />
+    <Compile Include="../../NOVR/Hands/FingerCurlMath.cs" Link="FingerCurlMath.cs" />
     <Compile Include="../../NOVR/FlightControls/FlightControlMath.cs" Link="FlightControlMath.cs" />
     <Compile Include="../../NOVR/Compatibility/PcVrCapabilities.cs" Link="PcVrCapabilities.cs" />
     <Compile Include="../../NOVR.XR.OpenXR/Settings/NovrControllerProfiles.cs" Link="NovrControllerProfiles.cs" />

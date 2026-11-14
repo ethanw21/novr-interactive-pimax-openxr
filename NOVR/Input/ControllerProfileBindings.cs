@@ -6,7 +6,8 @@ namespace NOVR.MotionControls;
 public sealed class ControllerBindings
 {
     internal readonly ConfigEntry<ControllerBindingProfile> Profile;
-    internal readonly ConfigEntry<float> TrackpadPressForce;
+    internal readonly ConfigEntry<float> TrackpadPressForce, GripSqueezeForce, TrackpadSwipeDistance;
+    internal readonly ConfigEntry<bool> FingerTracking;
     private readonly Bank _frame, _touch, _index;
     private ControllerBindingProfile _lastEffective;
     private int _changeVersion;
@@ -48,6 +49,20 @@ public sealed class ControllerBindings
                 new AcceptableValueRange<float>(.1f, 1f)));
         TrackpadPressForce.SettingChanged += (_, _) => TrackedControllers.TrackpadPressForce = TrackpadPressForce.Value;
         TrackedControllers.TrackpadPressForce = TrackpadPressForce.Value;
+        GripSqueezeForce = config.Bind(IndexSection, "Grip Squeeze Force", TrackedControllers.DefaultGripSqueezeForce,
+            new ConfigDescription("How hard the Valve Index grip must be squeezed for the Grip squeeze input, as a fraction of full force. Holding a handle needs no force; this is the extra squeeze on top. Lower if a squeeze is not registered; raise if holding a handle triggers it.",
+                new AcceptableValueRange<float>(.1f, 1f)));
+        GripSqueezeForce.SettingChanged += (_, _) => TrackedControllers.GripSqueezeForce = GripSqueezeForce.Value;
+        TrackedControllers.GripSqueezeForce = GripSqueezeForce.Value;
+        TrackpadSwipeDistance = config.Bind(IndexSection, "Trackpad Swipe Distance", TrackpadSwipe.DefaultDistance,
+            new ConfigDescription("How far the thumb must travel along the Valve Index trackpad, within a third of a second, to count as a swipe. The whole pad is 2. Lower if swipes are missed; raise if moving your thumb triggers them.",
+                new AcceptableValueRange<float>(TrackpadSwipe.MinDistance, TrackpadSwipe.MaxDistance)));
+        TrackpadSwipeDistance.SettingChanged += (_, _) => TrackedControllers.TrackpadSwipeDistance = TrackpadSwipeDistance.Value;
+        TrackedControllers.TrackpadSwipeDistance = TrackpadSwipeDistance.Value;
+        FingerTracking = config.Bind(IndexSection, "Finger Tracking", true,
+            "Curl each finger of the glove from the OpenXR runtime's hand tracking when Valve Index controllers are in use. Visual only. Needs a runtime that offers XR_EXT_hand_tracking; without it the glove follows grip and trigger as before. Turning it off applies at once; turning it on applies the next time the game starts.");
+        FingerTracking.SettingChanged += (_, _) => TrackedControllers.FingerTracking = FingerTracking.Value;
+        TrackedControllers.FingerTracking = FingerTracking.Value;
     }
     private const string IndexSection = "VR Controller Bindings - Index";
     private void Changed()

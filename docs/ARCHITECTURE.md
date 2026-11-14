@@ -82,6 +82,13 @@ examples of state that must be discarded when its original context disappears.
   [`CockpitWidgetSpace`](../NOVR/VrUi/Widgets/CockpitWidgetSpace.cs) uses the
   pilot viewpoint's rigid pose, ignoring imported bone scale. Saved layout offsets
   stay aircraft-fixed when the player recenters or changes their seat.
+- Finger curls are optional input.
+  [`NovrHandJointsFeature`](../NOVR.XR.OpenXR/Features/NovrHandJointsFeature.cs)
+  reads `XR_EXT_hand_tracking` joints when the runtime offers them and stays
+  idle otherwise; it must never fail the loader.
+  [`FingerCurlMath`](../NOVR/Hands/FingerCurlMath.cs) uses joint positions only,
+  so it does not depend on a runtime's joint orientations. The curls change
+  free-hand glove fingers and nothing else.
 - [`RiggedGlove`](../NOVR/Hands/RiggedGlove.cs) blends visual attachments;
   `PilotHandVisuals` then stabilizes free hands and updates
   [`PilotSleeves`](../NOVR/Hands/PilotSleeves.cs), which owns the copied arm bones,

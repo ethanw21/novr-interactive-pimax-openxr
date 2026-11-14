@@ -35,6 +35,28 @@ public partial class OpenXRSettings
         features = profiles.ToArray();
     }
 
+    // Finger positions come from an extension, not from a controller profile.
+    // Like gaze, it is optional: a runtime without it keeps everything else.
+    public void EnableNovrHandJoints(bool enable)
+    {
+        var all = new List<OpenXRFeature>(features);
+        var joints = all.Find(item => item is NovrHandJointsFeature);
+        if (joints == null)
+        {
+            if (!enable)
+                return;
+            joints = CreateInstance<NovrHandJointsFeature>();
+            joints.nameUi = nameof(NovrHandJointsFeature);
+            joints.featureIdInternal = NovrHandJointsFeature.featureId;
+            joints.company = "NOVR";
+            joints.openxrExtensionStrings = NovrHandJointsFeature.extensionStrings;
+            joints.required = false;
+            all.Add(joints);
+            features = all.ToArray();
+        }
+        joints.enabled = enable;
+    }
+
     private static void AddProfile<T>(List<OpenXRFeature> profiles, string id) where T : OpenXRInteractionFeature
     {
         var feature = profiles.Find(item => item is T);

@@ -13,6 +13,9 @@ public class XrPluginOpenXrToggler : XrPluginToggler
         // enumerated patch targets. Configure stereo before loader initialization too.
         OpenXRSettings.Instance.renderMode = OpenXRSettings.RenderMode.MultiPass;
         OpenXRSettings.Instance.EnableNovrControllerProfiles();
+        // Extensions are fixed when the OpenXR instance is created, so the
+        // saved choice applies from the next game start.
+        OpenXRSettings.Instance.EnableNovrHandJoints(MotionControls.TrackedControllers.FingerTracking);
         var xrLoader = ScriptableObject.CreateInstance<OpenXRLoader>();
         return xrLoader;
     }

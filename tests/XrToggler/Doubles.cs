@@ -103,6 +103,13 @@ namespace UnityEngine.XR.Management
         public XRManagerSettings Manager = null!;
     }
 }
+namespace NOVR.MotionControls
+{
+    internal static class TrackedControllers
+    {
+        internal static bool FingerTracking = true;
+    }
+}
 namespace UnityEngine.XR.OpenXR
 {
     public sealed class OpenXRSettings
@@ -115,6 +122,8 @@ namespace UnityEngine.XR.OpenXR
         public RenderMode renderMode;
         public bool ProfilesEnabled;
         public void EnableNovrControllerProfiles() => ProfilesEnabled = true;
+        public bool? HandJointsEnabled;
+        public void EnableNovrHandJoints(bool enable) => HandJointsEnabled = enable;
     }
     public class OpenXRLoader : Management.XRLoader
     {

@@ -75,7 +75,7 @@ internal sealed class ControllerDiagramView
             _leaders[i].raycastTarget = false;
             foreach (var value in new ControllerButton?[] { ControllerButton.Menu, ControllerButton.StickClick, null,
                 ControllerButton.Shoulder, ControllerButton.Trigger, ControllerButton.Top, ControllerButton.Secondary, ControllerButton.Primary, ControllerButton.Outside,
-                ControllerButton.Trackpad })
+                ControllerButton.Trackpad, ControllerButton.TrackpadUp, ControllerButton.TrackpadDown, ControllerButton.GripSqueeze })
             {
                 var button = MakeButton(hand.transform, value?.ToString() ?? "Grip", Vector2.zero, new Vector2(126, 38));
                 var item = new Control

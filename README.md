@@ -46,7 +46,7 @@ These buttons assume the flight stick is in your right hand. Left-handed mode mo
 | Quick wheel | Either thumbstick click | Either thumbstick click | Either thumbstick click | That hand free |
 | Reopen layout menu | Either thumbstick click | Either thumbstick click | Either thumbstick click | Edit layout active |
 
-Valve Index controllers are detected automatically and use their own preset. Their system buttons belong to the VR runtime, so View opens with a firm press on the left trackpad; with strapped-on controllers, open your hand and close it on a handle to grab it. This preset has not yet been confirmed on real hardware. [Index details](docs/CONTROLLER_BINDINGS.md#valve-index-controllers).
+Valve Index controllers are detected automatically and use their own preset. Their system buttons belong to the VR runtime, so View opens with a firm press on the left trackpad; with strapped-on controllers, open your hand and close it on a handle to grab it. A hard grip squeeze and trackpad swipes up and down are extra bindable inputs, sliding a thumb on the trackpad scrolls menus, and the glove's fingers follow your own when the OpenXR runtime reports them. This preset has not yet been confirmed on real hardware. [Index details](docs/CONTROLLER_BINDINGS.md#valve-index-controllers).
 
 Target selection and cycling act on button release; guns, weapon release, countermeasures and brakes are held actions. A white outline marks a handle within grab range (15 cm by default). Grip grabs it; **View → Flight controls** offers Hold or Toggle for each. **F7:** motion controls. **F8:** place handles. **F9:** View in the cockpit; map outside it.
 

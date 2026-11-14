@@ -119,6 +119,9 @@ internal sealed class ControllerBindingBank
         ControllerButton.Outside => hand.Outside ? 1 : 0,
         ControllerButton.StickClick => hand.StickClick ? 1 : 0,
         ControllerButton.Trackpad => hand.Trackpad ? 1 : 0,
+        ControllerButton.TrackpadUp => hand.SwipeUp ? 1 : 0,
+        ControllerButton.TrackpadDown => hand.SwipeDown ? 1 : 0,
+        ControllerButton.GripSqueeze => hand.GripSqueeze ? 1 : 0,
         _ => 0
     };
 }

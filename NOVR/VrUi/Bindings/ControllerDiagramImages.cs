@@ -78,15 +78,20 @@ internal static class ControllerDiagramImages
     {
         // Control centers in the right-hand cell of index-diagram.svg; the left
         // hand is its mirror image. As on Touch, thumbsticks sit outboard and
-        // A/B inboard. The trackpad leader lands on the pad's upper end, clear of B.
+        // A/B inboard. The trackpad has three leaders: swipes land on its two
+        // ends and the press between them, on a line that passes between B and A.
+        // Squeeze lands lower on the handle than Grip.
         var point = button switch
         {
             ControllerButton.Primary => new Vector2(76, 132),
             ControllerButton.Secondary => new Vector2(70, 102),
             ControllerButton.StickClick => new Vector2(142, 94),
-            ControllerButton.Trackpad => new Vector2(104, 88),
+            ControllerButton.TrackpadUp => new Vector2(104, 88),
+            ControllerButton.Trackpad => new Vector2(104, 113),
+            ControllerButton.TrackpadDown => new Vector2(104, 136),
             ControllerButton.Menu => new Vector2(140, 136),
             ControllerButton.Trigger => new Vector2(108, 18),
+            ControllerButton.GripSqueeze => new Vector2(106, 300),
             _ => new Vector2(106, 262)
         };
         return new Vector2((left ? 215 - point.x : point.x) / 215, point.y / 371);

@@ -6,7 +6,9 @@ public enum ControllerButton
     ShoulderOrPrimary, OutsideOrSecondary, PrimaryOrStickClick, PrimaryOrSecondary, SecondaryOrStickClick, SecondaryOrNone,
     TopOrSecondary, OutsideOrNone,
     // Valve Index only. Appended so saved bindings keep their existing names.
-    Trackpad
+    Trackpad,
+    // A firm squeeze of the grip, and a quick thumb swipe along the trackpad.
+    GripSqueeze, TrackpadUp, TrackpadDown
 }
 
 // The in-headset help uses the same hand/profile choices as input sampling.
@@ -30,7 +32,7 @@ internal static class ControllerButtonNames
         return resolved != ControllerButton.None && resolved == Resolve(second, frame);
     }
     // Index shares Touch's physical positions, with A/B on both hands, a
-    // force-sensing trackpad and no application menu button.
+    // force-sensing trackpad and grip, and no application menu button.
     internal static string Describe(ControllerButton button, bool left, bool frame, bool index = false)
     {
         button = Resolve(button, frame);
@@ -42,6 +44,9 @@ internal static class ControllerButtonNames
                 ControllerButton.Primary => "A",
                 ControllerButton.Secondary => "B",
                 ControllerButton.Trackpad => "Trackpad press",
+                ControllerButton.TrackpadUp => "Trackpad swipe up",
+                ControllerButton.TrackpadDown => "Trackpad swipe down",
+                ControllerButton.GripSqueeze => "Grip squeeze",
                 ControllerButton.Menu => "Unavailable (system button)",
                 ControllerButton.None => "Unassigned",
                 _ => "Unavailable"
@@ -56,7 +61,7 @@ internal static class ControllerButtonNames
             ControllerButton.Shoulder => frame ? "Bumper" : "Unavailable",
             ControllerButton.Top => frame ? (left ? "D-pad up" : "Y") : "Unavailable",
             ControllerButton.Outside => frame ? (left ? "D-pad left" : "B") : "Unavailable",
-            ControllerButton.Trackpad => "Unavailable",
+            ControllerButton.Trackpad or ControllerButton.TrackpadUp or ControllerButton.TrackpadDown or ControllerButton.GripSqueeze => "Unavailable",
             _ => "Unassigned"
         };
     }

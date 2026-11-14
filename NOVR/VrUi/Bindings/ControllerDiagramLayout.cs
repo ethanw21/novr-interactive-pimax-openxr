@@ -14,16 +14,24 @@ internal static class ControllerDiagramLayout
         if (profile == ControllerBindingProfile.Index)
         {
             // Same sides as Touch. The trackpad sits between the thumbstick and
-            // A/B, nearer the buttons, so its callout heads their column. Grip
-            // joins that column too, away from the strap drawn on the outside.
+            // A/B, nearer the buttons, so its callouts share their column. They
+            // are ordered so that no leader crosses another: the swipe callouts
+            // reach the pad's ends above B and below A, and the press reaches
+            // its middle between them. Grip and Squeeze join that column too,
+            // away from the strap drawn on the outside.
             var thumbstickSide = button is ControllerButton.Trigger or ControllerButton.StickClick or ControllerButton.Menu;
             columnLeft = thumbstickSide ? left : !left;
             y = button switch
             {
-                ControllerButton.Trigger or ControllerButton.Trackpad => 124,
-                ControllerButton.StickClick or ControllerButton.Secondary => 68,
-                ControllerButton.Menu or ControllerButton.Primary => 12,
-                _ => -44
+                ControllerButton.Trigger or ControllerButton.TrackpadUp => 124,
+                ControllerButton.Secondary => 82,
+                ControllerButton.StickClick => 68,
+                ControllerButton.Trackpad => 40,
+                ControllerButton.Menu => 12,
+                ControllerButton.Primary => -2,
+                ControllerButton.TrackpadDown => -44,
+                ControllerButton.GripSqueeze => -128,
+                _ => -86
             };
         }
         else if (profile == ControllerBindingProfile.Frame)

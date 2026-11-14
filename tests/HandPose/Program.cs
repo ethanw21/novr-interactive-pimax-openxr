@@ -167,6 +167,60 @@ foreach (var left in new[] { false, true })
         Settle();
         CheckFree();
 
+        // Tracked fingers curl one at a time on a free hand. Without finger
+        // data the three grasping fingers still close together with the grip.
+        Quaternion Bone(int bone) => glove.Renderer.bones[bone].localRotation;
+        int[] proximal = { GloveBones.IndexProximal, GloveBones.MiddleProximal, GloveBones.RingProximal, GloveBones.LittleProximal };
+        var open = proximal.Select(Bone).ToArray();
+        sample.HasFingers = true;
+        sample.Fingers = new FingerCurls { Ring = 1 };
+        Settle();
+        Check(Quaternion.Angle(Bone(GloveBones.RingProximal), open[2]) > 30, "A tracked ring finger did not close");
+        foreach (var other in new[] { 0, 1, 3 })
+            SameRotation(Bone(proximal[other]), open[other], "Closing the ring finger moved another finger");
+        var ringFist = Bone(GloveBones.RingProximal);
+        sample.Fingers = new FingerCurls { Ring = .5f, Little = 1 };
+        Settle();
+        Check(Quaternion.Angle(Bone(GloveBones.RingProximal), open[2]) > 10 && Quaternion.Angle(Bone(GloveBones.RingProximal), ringFist) > 10,
+            "A half-closed ring finger was not between open and fist");
+        Check(Quaternion.Angle(Bone(GloveBones.LittleProximal), open[3]) > 30, "A tracked little finger did not close");
+        SameRotation(Bone(GloveBones.MiddleProximal), open[1], "Tracked fingers still followed each other");
+        // The grip value closes no tracked finger; the trigger still closes
+        // the index finger when the runtime reports it open.
+        sample.Fingers = default;
+        sample.Grip = 1;
+        Settle();
+        foreach (var finger in new[] { 1, 2, 3 })
+            SameRotation(Bone(proximal[finger]), open[finger], "Grip value closed a finger the runtime reports open");
+        sample.Grip = 0;
+        sample.Trigger = 1;
+        Settle();
+        Check(Quaternion.Angle(Bone(GloveBones.IndexProximal), open[0]) > 30, "Trigger pull no longer closes the index finger");
+        sample.Trigger = 0;
+        sample.Fingers = new FingerCurls { Index = 1 };
+        Settle();
+        Check(Quaternion.Angle(Bone(GloveBones.IndexProximal), open[0]) > 30, "A tracked index finger did not close");
+        // Holding a handle keeps its authored pose whatever the fingers report.
+        sample.Fingers = new FingerCurls { Index = 1, Middle = 1, Ring = 1, Little = 1 };
+        Settle(grip);
+        var held = proximal.Select(Bone).ToArray();
+        sample.HasFingers = false;
+        sample.Fingers = default;
+        Settle(grip);
+        for (var finger = 0; finger < proximal.Length; finger++)
+            SameRotation(Bone(proximal[finger]), held[finger], "Finger tracking changed a held handle pose");
+        Settle();
+        sample.Grip = 1;
+        Settle();
+        var together = Quaternion.Angle(Bone(GloveBones.MiddleProximal), open[1]);
+        Check(together > 30 && Quaternion.Angle(Bone(GloveBones.RingProximal), open[2]) > 30 && Quaternion.Angle(Bone(GloveBones.LittleProximal), open[3]) > 30,
+            "Without finger data the grip no longer closes the hand");
+        sample.Grip = 0;
+        Settle();
+        for (var finger = 0; finger < proximal.Length; finger++)
+            SameRotation(Bone(proximal[finger]), open[finger], "Fingers did not return to the open hand");
+        CheckFree();
+
         Settle(grip);
         Near(glove.Root.position, grip.position + grip.rotation * Fs20HandPoses.Wrist(false, left), "Throttle anchor changed");
         MotionControlVisuals.FittedStick = false;

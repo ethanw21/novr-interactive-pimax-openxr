@@ -217,11 +217,17 @@ namespace NOVR.MotionControls
     internal static class TrackedControllers
     {
         internal const float DefaultTrackpadPressForce = .4f; internal static float TrackpadPressForce = DefaultTrackpadPressForce;
+        internal const float DefaultGripSqueezeForce = .5f; internal static float GripSqueezeForce = DefaultGripSqueezeForce, TrackpadSwipeDistance = TrackpadSwipe.DefaultDistance; internal static bool FingerTracking = true;
         internal static ControllerHardwareProfile Left, Right; internal static ControllerHardwareProfile Profile(bool left) => left ? Left : Right; internal static ControllerSample LeftSample, RightSample; internal static ControllerSample Read(bool left) => left ? LeftSample : RightSample;
+    }
+    internal static class TrackpadSwipe
+    {
+        internal const float DefaultDistance = .7f, MinDistance = .3f, MaxDistance = 1.5f;
     }
     internal struct ControllerSample
     {
         internal bool Valid, NativeFrame, Primary, Secondary, Top, Outside, StickClick, Menu, Shoulder, Trackpad, TrackpadTouched, PrimaryTouched, SecondaryTouched, TopTouched, OutsideTouched, ThumbstickTouched, TriggerTouched, GripTouched; internal float Trigger, Grip;
+        internal bool GripSqueeze, SwipeUp, SwipeDown, HasTrackpadAxis; internal float GripForce; internal UnityEngine.Vector2 TrackpadAxis;
     }
     internal sealed class ControllerActions
     {

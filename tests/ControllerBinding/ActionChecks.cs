@@ -87,6 +87,36 @@ internal static class ActionChecks
             (TrackedControllers.Left, TrackedControllers.Right) = hardware;
         }
 
+        // A swipe is a short tap and a squeeze an ordinary hold: both act on
+        // release like any other button, and only with the handle held.
+        foreach (var extra in new[] { ControllerButton.TrackpadUp, ControllerButton.TrackpadDown, ControllerButton.GripSqueeze })
+            foreach (var left in new[] { false, true })
+            {
+                var hardware = (TrackedControllers.Left, TrackedControllers.Right);
+                TrackedControllers.Left = TrackedControllers.Right = ControllerHardwareProfile.Index;
+                var f = Start(ControllerActionId.Gear, false, ControllerBindingProfile.Index, left);
+                f.Bindings.Set(ControllerActionId.Gear, new(extra, ControllerHandRole.Stick));
+                check(f.Bindings.Get(ControllerActionId.Gear).Button == extra, "Index accepts a " + extra + " flight binding");
+                f.TickTrackpad(false);
+                f.TickTrackpad(true);
+                f.TickTrackpad(false);
+                f.TickTrackpad(false);
+                check(!f.Actions.Queued(NativeControllerAction.Gear), "A trackpad press does not trigger a " + extra + " binding");
+                f.TickExtra(extra, true);
+                f.TickExtra(extra, true);
+                check(!f.Actions.Queued(NativeControllerAction.Gear), extra + " waits for release like other buttons");
+                f.TickExtra(extra, false);
+                f.TickExtra(extra, false);
+                check(f.Actions.Queued(NativeControllerAction.Gear), $"Index {(left ? "left" : "right")} {extra} queues its action");
+                MotionFlightController.Instance.StickHeld = false;
+                f.TickExtra(extra, false);
+                f.TickExtra(extra, true);
+                f.TickExtra(extra, false);
+                f.TickExtra(extra, false);
+                check(!f.Actions.Queued(NativeControllerAction.Gear), extra + " flight binding still needs its handle held");
+                (TrackedControllers.Left, TrackedControllers.Right) = hardware;
+            }
+
         foreach (var context in new[] { "grip", "flight", "menu", "wheel", "map", "tracking", "layout" })
         {
             var f = Start(ControllerActionId.Gear);
@@ -313,6 +343,16 @@ internal static class ActionChecks
             Time.frameCount++;
             TrackedControllers.Samples[0] = TrackedControllers.Samples[1] = new ControllerSample { Valid = Valid, NativeFrame = _frame };
             TrackedControllers.Samples[_left ? 0 : 1].Trackpad = pressed;
+            Invoke("Update");
+        }
+        internal void TickExtra(ControllerButton extra, bool pressed)
+        {
+            Time.frameCount++;
+            TrackedControllers.Samples[0] = TrackedControllers.Samples[1] = new ControllerSample { Valid = Valid, NativeFrame = _frame };
+            ref var sample = ref TrackedControllers.Samples[_left ? 0 : 1];
+            sample.SwipeUp = pressed && extra == ControllerButton.TrackpadUp;
+            sample.SwipeDown = pressed && extra == ControllerButton.TrackpadDown;
+            sample.GripSqueeze = pressed && extra == ControllerButton.GripSqueeze;
             Invoke("Update");
         }
         internal void TickThrottleClick(bool pressed, bool held)

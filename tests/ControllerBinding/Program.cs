@@ -73,6 +73,40 @@ try
         Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.Menu), "Unavailable (system button)", "Index system button is not offered");
         Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Touch, left, ControllerButton.Trackpad), "Unavailable", "Touch has no trackpad name");
     }
+    // Index extras: trackpad swipes and a firm grip squeeze. They exist only
+    // on Index and start unassigned, so adding them changes no one's layout.
+    var indexExtras = new[] { ControllerButton.TrackpadUp, ControllerButton.TrackpadDown, ControllerButton.GripSqueeze };
+    foreach (var left in new[] { false, true })
+    {
+        foreach (var extra in indexExtras)
+        {
+            True(ControllerBindings.IsButtonAvailable(ControllerBindingProfile.Index, left, extra), "Index offers " + extra + " on either hand");
+            True(!ControllerBindings.IsButtonAvailable(ControllerBindingProfile.Touch, left, extra) &&
+                !ControllerBindings.IsButtonAvailable(ControllerBindingProfile.Frame, left, extra), "Only Index offers " + extra);
+            True(ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.Gear, extra) &&
+                ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.Guns, extra), extra + " may be a flight action");
+            Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Touch, left, extra), "Unavailable", "Touch has no " + extra);
+            Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Frame, left, extra), "Unavailable", "Frame has no " + extra);
+        }
+        True(ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.WristMenu, ControllerButton.TrackpadUp) &&
+            ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.Map, ControllerButton.TrackpadDown), "A swipe may open View or the map");
+        True(!ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.WristMenu, ControllerButton.GripSqueeze) &&
+            !ControllerBindings.IsBindingAvailable(ControllerBindingProfile.Index, left, ControllerActionId.Map, ControllerButton.GripSqueeze),
+            "A free-hand squeeze grabs handles, so it cannot open View or the map");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.TrackpadUp), "Trackpad swipe up", "Index swipe up name");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.TrackpadDown), "Trackpad swipe down", "Index swipe down name");
+        Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Index, left, ControllerButton.GripSqueeze), "Grip squeeze", "Index squeeze name");
+    }
+    foreach (var profile in new[] { ControllerBindingProfile.Frame, ControllerBindingProfile.Touch, ControllerBindingProfile.Index })
+        foreach (var action in ControllerBindingDefaults.Actions)
+            True(Array.IndexOf(indexExtras, ControllerBindingDefaults.Get(profile, action).Button) < 0, action + " does not start on an Index extra");
+    Equal(ControllerBindings.Read(new ControllerSample { SwipeUp = true }, ControllerButton.TrackpadUp), 1f, "Swipe up reads as a held button");
+    Equal(ControllerBindings.Read(new ControllerSample { SwipeDown = true }, ControllerButton.TrackpadDown), 1f, "Swipe down reads as a held button");
+    Equal(ControllerBindings.Read(new ControllerSample { GripSqueeze = true }, ControllerButton.GripSqueeze), 1f, "Grip squeeze reads as a held button");
+    foreach (var extra in indexExtras)
+        Equal(ControllerBindings.Read(new ControllerSample { Trackpad = true, Primary = true, Trigger = 1 }, extra), 0f, "Other inputs never read as " + extra);
+    Equal(ControllerBindings.Read(new ControllerSample { SwipeUp = true, GripSqueeze = true }, ControllerButton.TrackpadDown), 0f, "Swipe directions stay separate");
+    Equal((int)ControllerButton.Trackpad, 17, "Saved bindings keep their numbering");
     Equal(ControllerBindingDefaults.Get(ControllerBindingProfile.Index, ControllerActionId.WristMenu).Button, ControllerButton.Trackpad, "Index View defaults to the trackpad");
     Equal(ControllerBindingDefaults.ButtonLabel(ControllerBindingProfile.Touch, true, ControllerButton.Primary), "X", "Touch left keeps X");
     Equal(ControllerBindings.Read(new ControllerSample { Trackpad = true }, ControllerButton.Trackpad), 1f, "Trackpad press reads as a held button");
@@ -175,6 +209,32 @@ try
     indexRestored.TrackpadPressForce.Value = 0f;
     Equal(TrackedControllers.TrackpadPressForce, .1f, "Trackpad press force cannot be configured to fire at rest");
     indexRestored.TrackpadPressForce.Value = TrackedControllers.DefaultTrackpadPressForce;
+    Equal(TrackedControllers.GripSqueezeForce, TrackedControllers.DefaultGripSqueezeForce, "Grip squeeze force starts at its default");
+    indexRestored.GripSqueezeForce.Value = .8f;
+    Equal(TrackedControllers.GripSqueezeForce, .8f, "Saved grip squeeze force reaches the controller reader");
+    indexRestored.GripSqueezeForce.Value = 0f;
+    Equal(TrackedControllers.GripSqueezeForce, .1f, "Grip squeeze cannot be configured to fire at rest");
+    indexRestored.GripSqueezeForce.Value = TrackedControllers.DefaultGripSqueezeForce;
+    Equal(TrackedControllers.TrackpadSwipeDistance, TrackpadSwipe.DefaultDistance, "Swipe distance starts at its default");
+    indexRestored.TrackpadSwipeDistance.Value = 1.1f;
+    Equal(TrackedControllers.TrackpadSwipeDistance, 1.1f, "Saved swipe distance reaches the controller reader");
+    indexRestored.TrackpadSwipeDistance.Value = 0f;
+    Equal(TrackedControllers.TrackpadSwipeDistance, TrackpadSwipe.MinDistance, "Swipe distance cannot shrink to thumb jitter");
+    indexRestored.TrackpadSwipeDistance.Value = TrackpadSwipe.DefaultDistance;
+    True(TrackedControllers.FingerTracking && indexRestored.FingerTracking.Value, "Finger tracking is on by default");
+    indexRestored.FingerTracking.Value = false;
+    True(!TrackedControllers.FingerTracking, "Turning finger tracking off applies at once");
+    indexRestored.FingerTracking.Value = true;
+    var extrasConfig = new ConfigFile(indexConfig.ConfigFilePath, false) { SaveOnConfigSet = false };
+    var extras = new ControllerBindings(extrasConfig);
+    extras.Set(ControllerActionId.Radar, new(ControllerButton.TrackpadUp, ControllerHandRole.Stick));
+    extras.Set(ControllerActionId.Brake, new(ControllerButton.GripSqueeze, ControllerHandRole.Throttle));
+    extras.Set(ControllerActionId.WristMenu, new(ControllerButton.GripSqueeze, ControllerHandRole.Left));
+    extrasConfig.Save();
+    var extrasRestored = new ControllerBindings(new ConfigFile(indexConfig.ConfigFilePath, false) { SaveOnConfigSet = false });
+    Equal(extrasRestored.Get(ControllerActionId.Radar), new ControllerActionBinding(ControllerButton.TrackpadUp, ControllerHandRole.Stick), "A swipe binding survives reload");
+    Equal(extrasRestored.Get(ControllerActionId.Brake), new ControllerActionBinding(ControllerButton.GripSqueeze, ControllerHandRole.Throttle), "A squeeze binding survives reload");
+    Equal(extrasRestored.Get(ControllerActionId.WristMenu).Button, ControllerButton.Trackpad, "View rejects a grip squeeze and keeps its button");
 
     Hardware(ControllerBindingProfile.Frame);
     var stock = Config("old-stock");

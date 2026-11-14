@@ -10,6 +10,8 @@ namespace NOVR.VrUi;
 // Standard UGUI pointer events keep buttons, dropdowns, scrolling and dragging working.
 internal sealed class ControllerUiPointer
 {
+    // Wheel steps for one full length of the Index trackpad.
+    private const float TrackpadScrollSteps = 6f;
     private readonly PointerHandSelection _hands = new();
     private ControllerButtonGate Trigger => _hands.Trigger;
     private PointerEventData? _event;
@@ -135,7 +137,10 @@ internal sealed class ControllerUiPointer
         OverMap = IsMap(hit.gameObject);
         SetHover(hit.gameObject);
         // UGUI scroll is in wheel steps. Use elapsed time, not frame count.
-        Scroll = new Vector2(0, FlightControlMath.Axis(hand.Axis.y, 0.2f, 1) * 12f * Mathf.Min(Time.unscaledDeltaTime, 0.05f));
+        // Sliding a thumb along an Index trackpad drags the list with it, as on
+        // a touch screen: one pad length moves it by TrackpadScrollSteps.
+        Scroll = new Vector2(0, FlightControlMath.Axis(hand.Axis.y, 0.2f, 1) * 12f * Mathf.Min(Time.unscaledDeltaTime, 0.05f) -
+            (FlightControlMath.IsFinite(hand.TrackpadScroll) ? hand.TrackpadScroll : 0) * (TrackpadScrollSteps / 2f));
         data.scrollDelta = Scroll;
         if (Trigger.Pressed)
         {

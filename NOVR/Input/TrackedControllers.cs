@@ -3,6 +3,7 @@ using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.XR;
 using UnityEngine.XR;
 using UnityEngine.XR.OpenXR;
+using UnityEngine.XR.OpenXR.Features;
 using UnityEngine.XR.OpenXR.Features.Interactions;
 using CommonUsages = UnityEngine.XR.CommonUsages;
 
@@ -11,14 +12,19 @@ namespace NOVR.MotionControls;
 internal struct ControllerSample
 {
     public bool Valid, HasAxis, HasAimPose, StickClick, Primary, Secondary, Menu, Shoulder, Top, Outside, Trackpad, NativeFrame;
+    // Valve Index only. GripSqueeze is a firm squeeze past the configured force;
+    // SwipeUp and SwipeDown read as held for a moment after a thumb swipe.
+    public bool GripSqueeze, SwipeUp, SwipeDown, HasTrackpadAxis, HasFingers;
     // Presence is visual-only and never aliases a button press or flight action.
     public bool HasThumbTouch, HasTriggerTouch, ThumbstickTouched, ButtonTouched, PrimaryTouched, SecondaryTouched, TopTouched, OutsideTouched, ThumbrestTouched, TrackpadTouched, TriggerTouched, GripTouched;
     public InputDevice Device;
     public ControllerHardwareProfile Profile;
-    public float Grip, Trigger;
+    public float Grip, Trigger, GripForce, TrackpadScroll;
     public Vector3 Position, AimPosition;
     public Quaternion Rotation, AimRotation;
-    public Vector2 Axis;
+    public Vector2 Axis, TrackpadAxis;
+    // Per-finger curl from the runtime's hand tracking. Visual only.
+    public FingerCurls Fingers;
 }
 
 internal static class TrackedControllers
@@ -38,7 +44,18 @@ internal static class TrackedControllers
     internal static float TrackpadPressForce = DefaultTrackpadPressForce;
     private static readonly InputFeatureUsage<float> TrackpadForceUsage = new("Secondary2DAxisForce");
     private static readonly bool[] TrackpadHeld = new bool[2];
-    internal static bool TrackpadPressed(bool held, float force, float threshold) =>
+    // Grip force is separate from the grip value that holds a handle: the value
+    // rises as the hand closes, force only when the handle is squeezed.
+    internal const float DefaultGripSqueezeForce = .5f;
+    internal static float GripSqueezeForce = DefaultGripSqueezeForce;
+    private static readonly InputFeatureUsage<float> GripForceUsage = new("GripForce");
+    private static readonly bool[] SqueezeHeld = new bool[2];
+    internal static float TrackpadSwipeDistance = TrackpadSwipe.DefaultDistance;
+    private static readonly TrackpadSwipe[] Swipes = { new(), new() };
+    // Read at startup to decide whether the hand tracking extension is requested.
+    internal static bool FingerTracking = true;
+    private static readonly Vector3[] Joints = new Vector3[FingerCurlMath.JointCount];
+    internal static bool ForcePressed(bool held, float force, float threshold) =>
         FlightControlMath.IsFinite(force) && FlightControlMath.IsFinite(threshold) && threshold > 0 &&
         force >= (held ? threshold * .75f : threshold);
     // One coherent runtime sample per hand per frame, shared by input, UI and visuals.
@@ -130,7 +147,11 @@ internal static class TrackedControllers
         var sample = ReadTracked(left);
         // A press held through tracking loss must be made again afterwards.
         if (!sample.Valid)
-            TrackpadHeld[left ? 0 : 1] = false;
+        {
+            var hand = left ? 0 : 1;
+            TrackpadHeld[hand] = SqueezeHeld[hand] = false;
+            Swipes[hand].Reset();
+        }
         return sample;
     }
     private static ControllerSample ReadTracked(bool left)
@@ -199,13 +220,41 @@ internal static class TrackedControllers
         var restTouch = Touch("thumbrestTouched", out var hasRestTouch);
         var trackpad = false;
         var trackpadTouch = false;
+        var squeeze = false;
+        var gripForce = 0f;
+        var hasPad = false;
+        var pad = Vector2.zero;
+        var swipe = TrackpadSwipeDirection.None;
+        var hasFingers = false;
+        FingerCurls fingers = default;
         if (profile == ControllerHardwareProfile.Index)
         {
             trackpadTouch = Button("trackpadTouched");
             ReadAnalog(device, TrackpadForceUsage, inputDevice, "trackpadForce", out var trackpadForce);
-            trackpad = TrackpadPressed(TrackpadHeld[handIndex], trackpadForce, TrackpadPressForce);
+            trackpad = ForcePressed(TrackpadHeld[handIndex], trackpadForce, TrackpadPressForce);
+            ReadAnalog(device, GripForceUsage, inputDevice, "gripForce", out gripForce);
+            squeeze = ForcePressed(SqueezeHeld[handIndex], gripForce, GripSqueezeForce);
+            if (!FlightControlMath.IsFinite(gripForce))
+                gripForce = 0;
+            hasPad = device.TryGetFeatureValue(CommonUsages.secondary2DAxis, out pad) &&
+                     FlightControlMath.IsFinite(pad.x) && FlightControlMath.IsFinite(pad.y);
+            if (!hasPad && inputDevice?.TryGetChildControl<Vector2Control>("trackpad") is Vector2Control padControl)
+            {
+                pad = padControl.ReadValue();
+                hasPad = FlightControlMath.IsFinite(pad.x) && FlightControlMath.IsFinite(pad.y);
+            }
+            if (!hasPad)
+                pad = Vector2.zero;
+            swipe = Swipes[handIndex].Update(trackpadTouch && hasPad, pad.x, pad.y, trackpad, Time.unscaledTime, TrackpadSwipeDistance);
+            // The runtime derives finger joints from the controller's own
+            // sensors. They only shape the glove, never an input.
+            hasFingers = FingerTracking && NovrHandJointsFeature.TryGetJointPositions(left, Joints) &&
+                         FingerCurlMath.TryCurls(Joints, out fingers);
         }
+        else
+            Swipes[handIndex].Reset();
         TrackpadHeld[handIndex] = trackpad;
+        SqueezeHeld[handIndex] = squeeze;
         var aimPosition = position;
         var aimRotation = rotation;
         var hasAimPose = false;
@@ -235,6 +284,15 @@ internal static class TrackedControllers
             Top = Button("faceButtonTop"),
             Outside = Button("faceButtonOutside"),
             Trackpad = trackpad,
+            GripSqueeze = squeeze,
+            GripForce = gripForce,
+            SwipeUp = swipe == TrackpadSwipeDirection.Up,
+            SwipeDown = swipe == TrackpadSwipeDirection.Down,
+            HasTrackpadAxis = hasPad && trackpadTouch,
+            TrackpadAxis = hasPad && trackpadTouch ? pad : Vector2.zero,
+            TrackpadScroll = profile == ControllerHardwareProfile.Index ? Swipes[handIndex].Scroll : 0,
+            HasFingers = hasFingers,
+            Fingers = fingers,
             NativeFrame = nativeFrame,
             Profile = profile,
             HasThumbTouch = hasStickTouch || hasButtonTouch || hasRestTouch,

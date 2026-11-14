@@ -40,9 +40,11 @@ internal static class ControllerBindingDefaults
     private static readonly ControllerButton[] TouchRightButtons = { ControllerButton.None, ControllerButton.Trigger, ControllerButton.Primary,
         ControllerButton.Secondary, ControllerButton.StickClick };
     // Both Index system buttons belong to the runtime. The trackpad takes the
-    // place of an application menu button on either hand.
+    // place of an application menu button on either hand. Its swipes and a
+    // firm grip squeeze are extra inputs that start unassigned.
     private static readonly ControllerButton[] IndexButtons = { ControllerButton.None, ControllerButton.Trigger, ControllerButton.Primary,
-        ControllerButton.Secondary, ControllerButton.StickClick, ControllerButton.Trackpad };
+        ControllerButton.Secondary, ControllerButton.StickClick, ControllerButton.Trackpad,
+        ControllerButton.TrackpadUp, ControllerButton.TrackpadDown, ControllerButton.GripSqueeze };
     private static ControllerButton[] Buttons(ControllerBindingProfile profile, bool left) => profile switch
     {
         ControllerBindingProfile.Frame => FrameButtons,
@@ -94,9 +96,11 @@ internal static class ControllerBindingDefaults
         var resolved = ControllerButtonNames.Resolve(button, profile == ControllerBindingProfile.Frame);
         return Array.IndexOf(Buttons(profile, left), resolved) >= 0;
     }
+    // Map and View work with a free hand, where the trigger clicks menus, the
+    // thumbstick click opens the wheel and closing the hand grabs a handle.
     internal static bool IsBindingAvailable(ControllerBindingProfile profile, bool left, ControllerActionId action, ControllerButton button) =>
         IsButtonAvailable(profile, left, button) && !((action == ControllerActionId.Map || action == ControllerActionId.WristMenu) &&
-            ControllerButtonNames.Resolve(button, profile == ControllerBindingProfile.Frame) is ControllerButton.Trigger or ControllerButton.StickClick);
+            ControllerButtonNames.Resolve(button, profile == ControllerBindingProfile.Frame) is ControllerButton.Trigger or ControllerButton.StickClick or ControllerButton.GripSqueeze);
     internal static string ButtonLabel(ControllerBindingProfile profile, bool left, ControllerButton button) =>
         ControllerButtonNames.Describe(button, left, profile == ControllerBindingProfile.Frame, profile == ControllerBindingProfile.Index);
     internal static string ProfileLabel(ControllerBindingProfile profile) => profile switch

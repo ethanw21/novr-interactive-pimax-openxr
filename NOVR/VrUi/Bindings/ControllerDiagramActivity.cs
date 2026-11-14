@@ -13,6 +13,8 @@ internal enum ControllerDiagramInput
 // Physical state only: never consult bindings or dispatch a gameplay action.
 internal static class ControllerDiagramActivity
 {
+    // The outer thirds of the pad, and the first sign of force on the grip.
+    private const float SwipeZone = 1f / 3, SqueezeTouch = .05f;
     internal static ControllerDiagramInput Read(ControllerSample sample, ControllerButton? button, bool left, bool frame)
     {
         if (!sample.Valid || !frame && (!left && button == ControllerButton.Menu ||
@@ -30,6 +32,9 @@ internal static class ControllerDiagramActivity
             ControllerButton.Shoulder => sample.Shoulder,
             ControllerButton.StickClick => sample.StickClick,
             ControllerButton.Trackpad => sample.Trackpad,
+            ControllerButton.TrackpadUp => sample.SwipeUp,
+            ControllerButton.TrackpadDown => sample.SwipeDown,
+            ControllerButton.GripSqueeze => sample.GripSqueeze,
             _ => false
         };
         if (pressed)
@@ -44,6 +49,11 @@ internal static class ControllerDiagramActivity
             ControllerButton.Outside => sample.OutsideTouched,
             ControllerButton.StickClick => sample.ThumbstickTouched,
             ControllerButton.Trackpad => sample.TrackpadTouched,
+            // Amber follows the thumb along the pad, so position sensing can be
+            // checked without making a swipe.
+            ControllerButton.TrackpadUp => sample.HasTrackpadAxis && sample.TrackpadAxis.y > SwipeZone,
+            ControllerButton.TrackpadDown => sample.HasTrackpadAxis && sample.TrackpadAxis.y < -SwipeZone,
+            ControllerButton.GripSqueeze => sample.GripForce > SqueezeTouch,
             _ => false
         };
         return touched ? ControllerDiagramInput.Touch : ControllerDiagramInput.None;
