@@ -7,7 +7,8 @@ internal static class CandidateChecks
         var passed = 0;
         void Check(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
             passed++;
         }
         bool Eligible(string? objectName = "EjectionSeat", string? meshName = "ejectionSeat",

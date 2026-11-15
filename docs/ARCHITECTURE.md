@@ -271,5 +271,33 @@ unavailable input retains the fixed centre. Gaze
 does not share gameplay targeting state. Native rate-map buffers reuse storage
 and texture/view resources, updating only changed tile rectangles.
 
+## Frame timing and tuning
+
+`Performance/FrameTimingRuntime` samples the engine's own frame timings, the
+frame interval and managed allocation into `FrameTimingStats`, a fixed window
+that allocates nothing per frame. It runs only while the Frame timing page is
+open or logging is on. The readout and the optional `[NOVR] Frame timing:` log
+line are measurements of the whole game, not of NOVR alone; compare the same
+scene before and after a change.
+
+`FramePacingGuard` applies `FramePacingPolicy`: while a headset is active the
+game's `targetFrameRate` and vertical sync are held off, the game's latest
+request is remembered, and it is handed back when the headset stops or the
+setting is turned off. It never overwrites a value the game set meanwhile.
+
+`SharedShadows` is experimental and off by default. With one render pass per
+eye the render pipeline draws the sun shadow map twice per frame. When the
+setting is on, the second eye of the same camera and frame is handed the first
+eye's cascade data, skips only the slice draws and leaves the map untouched;
+keywords and receiver constants are still set per eye. `SharedShadowPolicy`
+refuses reuse whenever another camera drew into the map in between, the shadow
+settings differ or the map was reallocated. Shadow-caster culling for the
+second eye is skipped only when no additional light can cast shadows. The
+render pipeline is patched when the setting is turned on and released when it
+is turned off; any exception turns the feature off for the session. The first
+eye's cascades are fitted to the first eye only, so the far edge of the second
+eye's view can lack shadows. That trade-off, and any gain, must be judged in a
+headset.
+
 `GameGraphicsSettings` exposes only native tree, cloud and shadow setters. It
 does not own parallel saved values or apply quality changes on menu creation.

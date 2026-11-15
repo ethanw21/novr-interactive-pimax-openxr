@@ -40,6 +40,7 @@ PORTABLE = (
     ("controller-diagram-ui", "tests/ControllerDiagramUi/ControllerDiagramUi.csproj"),
     ("hand-comfort", "tests/HandComfort/HandComfortChecks.csproj"),
     ("seat-clearance", "tests/SeatClearance/SeatClearance.csproj"),
+    ("vr-performance", "tests/Performance/PerformanceChecks.csproj"),
     ("arm-pose", "tests/ArmPose/ArmPoseChecks.csproj"),
     ("auxiliary-flight-axis", "tests/AuxiliaryFlightAxis/AuxiliaryFlightAxis.csproj"),
     ("damage-overlay", "tests/DamageOverlay/DamageOverlay.csproj"),

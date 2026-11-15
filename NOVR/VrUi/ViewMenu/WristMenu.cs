@@ -24,7 +24,7 @@ internal sealed partial class WristMenu : MonoBehaviour
     private GameObject? _alertsPage;
     private GameObject? _flightPage, _ejectPage, _controlsPage, _throttlePage, _helpPage, _bindingsPage, _handsPage, _resetPage, _homePage, _seatPage, _menuOptionsPage, _displayPage, _feedbackPage, _aimingPage, _lookCuePage;
     private readonly Dictionary<GameObject, string> _pageTitles = new();
-    private GameObject? _performancePage, _handPositionPage, _handAnglesPage;
+    private GameObject? _performancePage, _frameTimingPage, _handPositionPage, _handAnglesPage;
     private bool _fittingLeftHand = true;
     private MenuHistory<GameObject>? _history;
     private Button? _backButton;
@@ -45,6 +45,7 @@ internal sealed partial class WristMenu : MonoBehaviour
     private string _pageTitle = "VIEW";
     internal static bool IsOpen => _instance?._panel?.activeSelf == true;
     internal static bool IsPerformancePage => IsOpen && _instance?._performancePage?.activeSelf == true;
+    internal static bool IsFrameTimingPage => IsOpen && _instance?._frameTimingPage?.activeSelf == true;
     private static bool CollectiveControls => GameManager.GetLocalAircraft(out var aircraft) && MotionFlightController.UsesLiftCollective(aircraft);
     private static bool UsableCockpit => WristMenuGameplayContext.UsableCockpit;
     private static bool GameplayMenuAvailable => WristMenuGameplayContext.Available(WristCursorFlag);
@@ -102,7 +103,8 @@ internal sealed partial class WristMenu : MonoBehaviour
         }
         var camera = _openContext.Camera;
         foreach (var button in _cockpitButtons)
-            if (button != null) button.interactable = OpenInCockpit;
+            if (button != null)
+                button.interactable = OpenInCockpit;
         if (_backButton != null)
             _backButton.interactable = _history?.CanBack == true;
         foreach (var setting in _settingRefresh)
@@ -201,12 +203,14 @@ internal sealed partial class WristMenu : MonoBehaviour
 
     private void Open()
     {
-        if (!GameplayMenuAvailable) return;
+        if (!GameplayMenuAvailable)
+            return;
         _layoutShortcut.Reset();
         if (DynamicMap.mapMaximized)
             SceneSingleton<DynamicMap>.i?.Minimize();
         var camera = APIBus.CockpitHudCamera;
-        if (camera == null) return;
+        if (camera == null)
+            return;
         _openContext = new WristMenuGameplayContext(camera);
         EnsurePanel();
         _panel!.GetComponent<Canvas>().worldCamera = camera;
@@ -214,7 +218,8 @@ internal sealed partial class WristMenu : MonoBehaviour
         if (CockpitHudWidgets.Editing)
             ShowLayoutControls();
         foreach (var button in _cockpitButtons)
-            if (button != null) button.interactable = OpenInCockpit;
+            if (button != null)
+                button.interactable = OpenInCockpit;
         _panel.SetActive(true);
         _anchored = false;
         CursorManager.SetFlag(WristCursorFlag, true);
@@ -242,7 +247,8 @@ internal sealed partial class WristMenu : MonoBehaviour
     private void ShowPage(GameObject page)
     {
         if (!OpenInCockpit && (page == _flightPage || page == _ejectPage || page == _seatPage ||
-            page == _resetPage || page == _aircraftProfilesPage || page == _layoutPage)) return;
+            page == _resetPage || page == _aircraftProfilesPage || page == _layoutPage))
+            return;
         _history!.Push(page);
         RefreshPage();
     }

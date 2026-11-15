@@ -49,6 +49,7 @@ this repository, rejecting missing resource globs and binary dependencies.
 | Hands and feedback | Glove poses and finger transitions, per-finger curl from OpenXR hand joints and its fallback, tracking resets, elbow/wrist alignment, sleeve reach/bounds/geometry and resource lifetime, texture preparation/ownership and initialization failure cleanup, UI-depth restoration and feedback dispatch |
 | HUD widgets | Per-aircraft layout slots, migration, saved placement, combined edit-session save/cancel/context transitions, corner acquisition, resizing/rotation, two-hand appearance-control highlights, borrowing/restoring native status sources, native notification refresh/expiry, duplicate-feed ownership, unchanged threat refresh and depth handling |
 | Map and flight cues | Minimap borrowing, terrain changes/tint/restoration, map interaction, redundant coordinate suppression, cue-aligned nearest-angle target selection, live cue-offset changes, selected-target exclusions, native selection handoff, nozzle/collective visibility, threat-vector bounds, delayed pitch-ladder setup and native runway endpoints |
+| Frame timing and pacing | Frame-time window statistics, slowest-1% and late-frame figures, readout and log wording, holding off and handing back the game's frame limit, and the conditions under which the second eye may reuse the first eye's shadow map |
 | Startup and installer | D3D11 launch argument/environment preservation, one-time handoff and parent-exit safety, flat/headless bypass, mission-content readiness, splash progress, managed XR payload upgrades under preloader file locks, release selection, package validation, replacement/rollback, shared install/uninstall locks, stale-version rejection after transaction recovery, picker ownership/failure handling, destination capture and settings preservation |
 
 These are executable check programs, so the runner uses `dotnet run` rather than
@@ -117,7 +118,8 @@ python tools/verify.py contracts \
 ```
 
 This reads the supplied assemblies with Mono.Cecil. It runs the core checks
-plus the embedded asset and patch/field compatibility checks. Reports are kept
+plus the embedded asset and patch/field compatibility checks, including the
+render pipeline members that fixed foveation and shadow sharing hook by name. Reports are kept
 separately under `artifacts/verification/contracts/`. It does not launch the
 game, install a package, send game input, or upload local assemblies. Do not add
 private game files or hardcoded installation paths to CI to make this check run.

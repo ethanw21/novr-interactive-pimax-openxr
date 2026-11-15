@@ -72,6 +72,8 @@ For a physical HOTAS, turn **View → Flight controls → Motion controls** off 
 
 **Foveated rendering (experimental):** available on native Windows with compatible NVIDIA hardware and Direct3D 11. View → VR performance → Foveated rendering has a strength slider for fixed or eye-tracked use. Extreme and Maximum test smaller protected regions and coarser peripheral shading; MSAA limits the outer rate to 2×2. **Follow eye tracking** uses supported OpenXR gaze, including Steam Frame; missing tracking uses a fixed fallback. Foveation, eye tracking and GPU measurements default to Off. The same package works on Linux/Proton with foveation unavailable. [Details and comparison steps](docs/PC_FOVEATION.md).
 
+**Frame timing & tuning:** View → VR performance → Frame timing & tuning shows frame rate, the slowest frames, late frames, CPU and GPU time per frame and memory churn for the last few seconds, so a setting can be judged in the same scene. **Hold off the game's frame limit in VR** (on by default) keeps the game's desktop frame-rate limit and vertical sync from holding the headset back; the game's own values return when the headset stops. **Share shadows between eyes** (experimental, off by default) draws the sun's shadows once per frame; turn it off if shadows flicker or go missing at the edge of view. **Log a timing summary** writes the same figures to `Player.log` every ten seconds.
+
 **Game graphics:** View → VR performance → Game graphics adjusts the game's tree distance, shadow quality and cloud detail. Lower settings can help in scenes heavy with trees, shadows or clouds. Existing settings stay unchanged until you adjust them.
 
 [Controls](docs/CONTROLLER_BINDINGS.md) · [Changes](docs/RELEASE_0.4.8.32.md)
