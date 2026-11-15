@@ -70,6 +70,17 @@ map.AddComponent<DynamicMap>();
 map.transform.SetParent(lower.transform, false);
 Invoke(lowerReadability, "LateUpdate");
 Check(Backplate(lower).enabled, "Unmoved native map retains contrast");
+// Once the game has registered its map, the panel is no longer searched: the
+// same object is followed as it is borrowed and returned.
+SceneSingleton<DynamicMap>.i = map.GetComponent<DynamicMap>();
+map.transform.SetParent(null, false);
+Invoke(lowerReadability, "LateUpdate");
+Check(!Backplate(lower).enabled, "A registered map that was borrowed leaves no empty backing");
+map.transform.SetParent(text.transform, false);
+Invoke(lowerReadability, "LateUpdate");
+Check(Backplate(lower).enabled, "A registered map returned anywhere under the panel restores contrast");
+map.transform.SetParent(lower.transform, false);
+SceneSingleton<DynamicMap>.i = null;
 Invoke(lowerReadability, "OnDisable");
 Near(lowerGroup.alpha, .6f, "Secondary disable restores original alpha");
 

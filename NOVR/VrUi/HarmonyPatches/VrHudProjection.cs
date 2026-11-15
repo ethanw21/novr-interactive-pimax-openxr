@@ -10,6 +10,43 @@ internal static class VrHudProjection
     private const float VrViewportHalfHorizontalDegrees = VrViewportHorizontalDegrees * 0.5f;
     private const float VrViewportHalfVerticalDegrees = VrViewportVerticalDegrees * 0.5f;
 
+    // The camera poses used by TryProjectToCockpitHud, read once so a caller
+    // that places many points in one pass does not query both cameras per point.
+    internal readonly struct Frame
+    {
+        internal readonly bool Valid;
+        internal readonly Vector3 MainPosition, MainForward, HudPosition;
+        internal readonly Quaternion HudRotation;
+        private readonly Matrix4x4 _worldToMain;
+
+        private Frame(Transform main, Transform hud)
+        {
+            Valid = true;
+            MainPosition = main.position;
+            MainForward = main.forward;
+            _worldToMain = main.worldToLocalMatrix;
+            HudPosition = hud.position;
+            HudRotation = hud.rotation;
+        }
+
+        internal static Frame Capture(Camera? mainCamera, Camera? cockpitHudCamera) =>
+            mainCamera == null || cockpitHudCamera == null ? default : new Frame(mainCamera.transform, cockpitHudCamera.transform);
+
+        internal bool IsBehind(Vector3 worldPosition) => Vector3.Dot(worldPosition - MainPosition, MainForward) < 0.0f;
+
+        internal bool TryProject(Vector3 worldPosition, out Vector3 hudPosition)
+        {
+            hudPosition = Vector3.zero;
+            if (!Valid)
+                return false;
+            var mainCameraLocal = _worldToMain.MultiplyPoint3x4(worldPosition);
+            if (mainCameraLocal.z <= 0.0f)
+                return false;
+            hudPosition = HudPosition + HudRotation * mainCameraLocal.normalized * HudDistance;
+            return true;
+        }
+    }
+
     public static bool TryProjectToCockpitHud(Vector3 worldPosition, out Vector3 hudPosition)
     {
         hudPosition = Vector3.zero;

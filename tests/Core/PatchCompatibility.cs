@@ -109,6 +109,24 @@ internal static class PatchCompatibility
             (owner: "CombatHUD", field: "targetText", type: "TMPro.TextMeshProUGUI"),
             (owner: "CombatHUD", field: "targetInfo", type: "TMPro.TextMeshProUGUI"),
             (owner: "CombatHUD", field: "targetArrow", type: "UnityEngine.UI.Image"),
+            (owner: "CombatHUD", field: "targetArrowTail", type: "UnityEngine.Transform"),
+            // Injected by name into the per-marker, per-turret and per-frame
+            // prefixes, so a rename or retype must fail here and not in flight.
+            (owner: "HUDUnitMarker", field: "hidden", type: "System.Boolean"),
+            (owner: "HUDUnitMarker", field: "_transform", type: "UnityEngine.Transform"),
+            (owner: "HUDUnitMarker", field: "icon", type: "UnityEngine.Sprite"),
+            (owner: "HUDUnitMarker", field: "timeCreated", type: "System.Single"),
+            (owner: "HUDUnitMarker", field: "color", type: "UnityEngine.Color"),
+            (owner: "HUDUnitMarker", field: "flashing", type: "System.Boolean"),
+            (owner: "Turret", field: "manual", type: "System.Boolean"),
+            (owner: "Turret", field: "target", type: "Unit"),
+            (owner: "Turret", field: "aircraft", type: "Aircraft"),
+            (owner: "Turret", field: "attachedUnit", type: "Unit"),
+            (owner: "Turret", field: "currentWeaponStation", type: "WeaponStation"),
+            (owner: "Turret", field: "lastVectorSent", type: "System.Single"),
+            (owner: "Turret", field: "manualVector", type: "UnityEngine.Vector3"),
+            (owner: "CameraCockpitState", field: "panView", type: "System.Single"),
+            (owner: "CameraCockpitState", field: "tiltView", type: "System.Single"),
             (owner: "AllyInfo", field: "hoveredAllyInfo", type: "TMPro.TextMeshProUGUI"),
             (owner: "AllyInfo", field: "hoveredAlly", type: "Aircraft"),
             (owner: "TacScreen", field: "displaySize", type: "System.Single"),
@@ -177,6 +195,19 @@ internal static class PatchCompatibility
             pilotAssignments[0].Previous?.Previous?.Previous?.Operand is not FieldReference pilots ||
             pilots.DeclaringType.FullName != "Aircraft" || pilots.Name != "pilots" || pilots.FieldType.FullName != "Pilot[]")
             failures.Add("Native cockpit view no longer selects aircraft.pilots[0]; seat-clearance ownership needs review.");
+        var turret = game.MainModule.Types.Single(t => t.FullName == "Turret");
+        if (turret.Methods.Count(m => m.Name == "AimTurret" && !m.IsStatic && m.ReturnType.FullName == "System.Void" &&
+                m.Parameters.Count == 1 && m.Parameters[0].ParameterType.FullName == "UnityEngine.Vector3") != 1 ||
+            !turret.Methods.Any(m => m.Name == "SetVector" && m.IsPublic && !m.IsStatic &&
+                m.Parameters.Count == 1 && m.Parameters[0].ParameterType.FullName == "UnityEngine.Vector3"))
+            failures.Add("Native manual-turret aim methods changed.");
+        var unitMarker = game.MainModule.Types.Single(t => t.FullName == "HUDUnitMarker");
+        if (unitMarker.Methods.Count(m => m.IsConstructor && !m.IsStatic && m.Parameters.Count == 2 &&
+                m.Parameters[0].ParameterType.FullName == "Unit" &&
+                m.Parameters[1].ParameterType.FullName == "UnityEngine.UI.Image") != 1 ||
+            unitMarker.Fields.SingleOrDefault(f => f.Name == "image") is not { IsPublic: true, IsStatic: false } markerImage ||
+            markerImage.FieldType.FullName != "UnityEngine.UI.Image")
+            failures.Add("Native unit-marker construction changed; marker styling needs review.");
         var gameplayUi = game.MainModule.Types.Single(t => t.FullName == "GameplayUI");
         var hurt = gameplayUi.Fields.SingleOrDefault(f => f.Name == "hurt");
         if (hurt?.FieldType.FullName != "UnityEngine.UI.Image" || !hurt.IsPublic || hurt.IsStatic)

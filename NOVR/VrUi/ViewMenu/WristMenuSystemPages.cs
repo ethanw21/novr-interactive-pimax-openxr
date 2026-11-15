@@ -89,10 +89,12 @@ internal sealed partial class WristMenu
     {
         _performancePage = Page("VR PERFORMANCE");
         var parent = _performancePage.transform;
-        var performanceInfo = Label(parent, "", new Vector2(0, 28), new Vector2(600, 350), 18);
+        var performanceInfo = Label(parent, "", new Vector2(0, 53), new Vector2(600, 300), 18);
         _liveLabels.Add((performanceInfo, () => PcVrCapabilities.Report));
         var foveationPage = BuildFixedFoveationPage();
         var graphicsPage = BuildGameGraphicsPage();
+        _frameTimingPage = BuildFrameTimingPage();
+        ActionButton(parent, "Frame timing & tuning  ›", 0, -159, () => ShowPage(_frameTimingPage));
         ActionButton(parent, "Foveated rendering  ›", 0, -211, () => ShowPage(foveationPage));
         ActionButton(parent, "Game graphics  ›", 1, -211, () => ShowPage(graphicsPage));
     }

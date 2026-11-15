@@ -285,6 +285,10 @@ public class ThreatList : UnityEngine.Component
 public class DynamicMap : UnityEngine.Component
 {
 }
+public static class SceneSingleton<T> where T : class
+{
+    public static T? i;
+}
 public class FlightHud : UnityEngine.Component
 {
 }

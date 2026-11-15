@@ -17,6 +17,10 @@ internal sealed class CockpitStatusSources : MonoBehaviour
         internal readonly string Id, Name;
         internal Lease? Lease;
         internal bool Failed;
+        // The HUD's transform count when this source was last looked for and
+        // not found, and when to look again regardless.
+        internal int MissingAt = -1;
+        internal float RetryAt;
         internal Source(string id, string name)
         {
             Id = id;
@@ -334,7 +338,7 @@ internal sealed class CockpitStatusSources : MonoBehaviour
             }
             if (discover && source.Lease == null && !source.Failed)
             {
-                var widget = source.Id == "damage" ? FindDamage(hud.statusAnchor) : Find(hud.transform, source.Name);
+                var widget = FindSource(source, hud);
                 if (widget != null)
                     source.Lease = new Lease(widget, content, source.Id == "weapons", source.Id == "damage");
             }
@@ -361,6 +365,27 @@ internal sealed class CockpitStatusSources : MonoBehaviour
             CockpitHudWidgets.SetHasContent(source.Id, source.Lease?.HasContent == true);
         }
         _auxiliary.Update(hud, discover);
+    }
+
+    // An aircraft without one of the named panels would otherwise have its
+    // whole HUD walked twice a second for as long as it flies, reading (and so
+    // allocating) every object's name. A panel cannot appear without the HUD
+    // gaining a transform, so wait for that, with a slow retry as a backstop.
+    // The damage diagram is found by component under one small anchor and
+    // needs no such gate.
+    private const float MissingRetrySeconds = 5f;
+
+    private static RectTransform? FindSource(Source source, FlightHud hud)
+    {
+        if (source.Id == "damage")
+            return FindDamage(hud.statusAnchor);
+        var transforms = hud.transform.hierarchyCount;
+        if (source.MissingAt == transforms && Time.unscaledTime < source.RetryAt)
+            return null;
+        var widget = Find(hud.transform, source.Name);
+        source.MissingAt = widget == null ? transforms : -1;
+        source.RetryAt = Time.unscaledTime + MissingRetrySeconds;
+        return widget;
     }
 
     private static RectTransform? Find(Transform parent, string name)
@@ -413,6 +438,7 @@ internal sealed class CockpitStatusSources : MonoBehaviour
         {
             source.Lease = null;
             source.Failed = false;
+            source.MissingAt = -1;
             CockpitHudWidgets.SetHasContent(source.Id, false);
         }
         _aircraft = null;

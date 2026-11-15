@@ -15,6 +15,7 @@ internal sealed class HudReadability : MonoBehaviour
     private bool _sourcesMoved;
     private float _readabilityAlpha = 1f;
     private ThreatList? _threats;
+    private DynamicMap? _map;
 
     internal static void Add(Transform panel, bool secondary)
     {
@@ -27,6 +28,7 @@ internal sealed class HudReadability : MonoBehaviour
     private void Awake()
     {
         _threats = GetComponentInChildren<ThreatList>(true);
+        _map = GetComponentInChildren<DynamicMap>(true);
         _baseScale = transform.localScale;
         _basePosition = transform.localPosition;
         _group = new HudCanvasGroupLease(gameObject);
@@ -65,7 +67,7 @@ internal sealed class HudReadability : MonoBehaviour
         // that map moves, retain native threat/text fallbacks without its empty
         // 400px square backing plate. Active native missile warnings may still
         // use contrast when the compact warning view cannot replace them.
-        var mapMoved = _secondary && CockpitHudWidgets.Owns("map") && GetComponentInChildren<DynamicMap>(true) == null;
+        var mapMoved = _secondary && CockpitHudWidgets.Owns("map") && !ContainsMap();
         var nativeThreats = incomingMissile && !CockpitAlerts.Active;
         if (_backplate != null)
             _backplate.enabled = config.HudContrast.Value &&
@@ -73,6 +75,19 @@ internal sealed class HudReadability : MonoBehaviour
             (!mapMoved || nativeThreats);
         _readabilityAlpha = _secondary && config.HudDeclutter.Value && !incomingMissile ? 0.15f : 1f;
         _group?.Apply(_readabilityAlpha);
+    }
+
+    // The map is borrowed and returned by reparenting the same object, so once
+    // it is known an ancestry test replaces a search of the whole panel. The
+    // search remains the fallback until the game has registered its map.
+    private bool ContainsMap()
+    {
+        if (_map == null)
+            _map = SceneSingleton<DynamicMap>.i;
+        if (_map != null)
+            return _map.transform.IsChildOf(transform);
+        _map = GetComponentInChildren<DynamicMap>(true);
+        return _map != null;
     }
 
     internal void SetWidgetSourcesMoved(bool moved)

@@ -228,6 +228,39 @@ using (var f = new Fixture())
 }
 using (var f = new Fixture())
 {
+    // An aircraft without a named panel must not have its HUD walked on
+    // every discovery tick, yet a panel that arrives later is still found.
+    var power = f.Widgets["power"];
+    power.transform.SetParent(null, false);
+    f.Tick();
+    Check(CockpitStatusSources.Owns(f.Widgets["weapons"].transform) && !CockpitStatusSources.Owns(power.transform), "A missing panel does not block the panels that exist");
+    power.transform.SetParent(f.Panel, false);
+    f.Tick();
+    Check(power.transform.parent == CockpitHudWidgets.Slots["power"], "A panel added to the HUD later is borrowed on the next discovery");
+}
+using (var f = new Fixture())
+{
+    var power = f.Widgets["power"];
+    power.transform.SetParent(null, false);
+    var spare = new GameObject("Unrelated");
+    spare.transform.SetParent(f.Panel, false);
+    new GameObject("Unrelated label").transform.SetParent(spare.transform, false);
+    // The first discovery moves the other panels out of the HUD; the second
+    // sees the settled hierarchy.
+    f.Tick();
+    f.Tick();
+    // As many objects leave as arrive with the panel, so the HUD looks
+    // unchanged.
+    spare.transform.SetParent(null, false);
+    power.transform.SetParent(f.Panel, false);
+    f.Tick();
+    Check(power.transform.parent == f.Panel, "An unchanged HUD is not searched again on the next discovery");
+    for (var i = 0; i < 5; i++)
+        f.Tick();
+    Check(power.transform.parent == CockpitHudWidgets.Slots["power"], "The slow retry still finds a panel the transform count missed");
+}
+using (var f = new Fixture())
+{
     var damage = f.AddDamage("StatusDisplay_Fighter1(Clone)");
     var parent = damage.transform.parent;
     damage.FailNextCanvasGroup = true;

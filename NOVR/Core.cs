@@ -49,6 +49,9 @@ public class Core : MonoBehaviour
         gameObject.AddComponent<MotionControls.TargetAcquisitionCue>();
         gameObject.AddComponent<MotionControls.PcVrCapabilities>();
         gameObject.AddComponent<Rendering.FixedFoveationRuntime>();
+        gameObject.AddComponent<Performance.FramePacingGuard>();
+        gameObject.AddComponent<Performance.FrameTimingRuntime>();
+        gameObject.AddComponent<Performance.SharedShadows>();
         gameObject.AddComponent<VrUi.WristMenu>();
     }
 

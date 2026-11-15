@@ -101,6 +101,18 @@ namespace UnityEngine
         public Vector3 localPosition, localScale = Vector3.one;
         public Quaternion localRotation = Quaternion.identity;
         public int childCount => Children.Count;
+        // Unity counts every transform in the hierarchy this one belongs to.
+        public int hierarchyCount
+        {
+            get
+            {
+                var root = this;
+                while (root.parent != null)
+                    root = root.parent;
+                return root.CountSelfAndDescendants();
+            }
+        }
+        private int CountSelfAndDescendants() => 1 + Children.Sum(child => child.CountSelfAndDescendants());
         public Transform GetChild(int index) => Children[index];
         public Transform? Find(string name) => Children.FirstOrDefault(child => child.name == name);
         public void SetParent(Transform? next, bool worldPositionStays)

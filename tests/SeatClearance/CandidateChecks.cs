@@ -7,7 +7,8 @@ internal static class CandidateChecks
         var passed = 0;
         void Check(bool condition, string message)
         {
-            if (!condition) throw new Exception(message);
+            if (!condition)
+                throw new Exception(message);
             passed++;
         }
         bool Eligible(string? objectName = "EjectionSeat", string? meshName = "ejectionSeat",
@@ -15,6 +16,27 @@ internal static class CandidateChecks
             float width = .53839946f, float height = 1.2963212f, float depth = .99190587f) =>
             SeatCandidatePolicy.IsEligible(objectName, meshName, local, separate, vertices, width, height, depth);
 
+        // The cut is kept while the head stays inside a dead band, so the band
+        // and the reduced cut radius must always agree with each other.
+        Check(SeatClearanceRange.Deadband(SeatClearanceRange.Default) == SeatClearanceRange.MaximumDeadband &&
+              SeatClearanceRange.Deadband(SeatClearanceRange.Maximum) == SeatClearanceRange.MaximumDeadband,
+            "Default and larger clearances keep one cut for a centimetre of head movement.");
+        Check(MathF.Abs(SeatClearanceRange.Deadband(SeatClearanceRange.Minimum) - .002f) < 1e-7f,
+            "The smallest clearance uses a proportionally smaller dead band.");
+        foreach (var radius in new[] { SeatClearanceRange.Minimum, .12f, SeatClearanceRange.Default, SeatClearanceRange.Maximum })
+        {
+            var deadband = SeatClearanceRange.Deadband(radius);
+            Check(SeatClearanceRange.CutRadius(radius) + deadband <= radius + 1e-7f,
+                "A cut made one dead band away never removes geometry outside the requested radius.");
+            Check(SeatClearanceRange.CutRadius(radius) - deadband >= radius * .9f,
+                "At least nine tenths of the requested radius stays clear wherever the head is inside the dead band.");
+            Check(SeatClearanceRange.WithinDeadband(deadband * deadband * .98f, radius) &&
+                  !SeatClearanceRange.WithinDeadband(deadband * deadband, radius),
+                "Movement up to the dead band keeps the cut and movement beyond it rebuilds.");
+        }
+        Check(SeatClearanceRange.Deadband(float.NaN) == 0 && SeatClearanceRange.Deadband(-1) == 0 &&
+              !SeatClearanceRange.WithinDeadband(0, float.NaN),
+            "A malformed radius has no dead band and always rebuilds.");
         Check(Eligible(), "The inventoried separate native ejection seat qualifies.");
         Check(Eligible(meshName: "fixedSeat_armor"), "The utility helicopter's fixed seat qualifies without an ejection-capability gate.");
         Check(Eligible(width: .53839946f * .9f), "The modded seat's physical nonuniform scale remains eligible.");

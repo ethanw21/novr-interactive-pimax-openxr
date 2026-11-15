@@ -1,4 +1,3 @@
-using System.Reflection;
 using HarmonyLib;
 using UnityEngine;
 
@@ -22,15 +21,13 @@ public class CameraCockpitStatePatch
     [HarmonyPatch(typeof(CameraCockpitState), "UpdateState")]
     private static class UpdateStatePatch
     {
-        private static readonly FieldInfo PanViewField = AccessTools.Field(typeof(CameraCockpitState), "panView");
-        private static readonly FieldInfo TiltViewField = AccessTools.Field(typeof(CameraCockpitState), "tiltView");
-
-
+        // Runs every frame in the cockpit. Injected references write the
+        // fields directly, where reflection boxed two floats per frame.
         [HarmonyPostfix]
-        private static void Postfix(CameraCockpitState __instance, CameraStateManager cam)
+        private static void Postfix(ref float ___panView, ref float ___tiltView)
         {
-            PanViewField.SetValue(__instance, 0.0f);
-            TiltViewField.SetValue(__instance, 0.0f);
+            ___panView = 0.0f;
+            ___tiltView = 0.0f;
         }
     }
 }

@@ -42,6 +42,10 @@ Check(first.FixedFoveation.RequestedLevel == FixedFoveationLevel.Off,
     "New configurations leave experimental fixed foveated rendering off.");
 Check(!first.FixedFoveation.UseEyeTracking.Value,
     "Optional eye-tracked foveation is disabled for new configurations.");
+Check(first.Performance.HoldOffFrameLimit.Value && !first.Performance.LogFrameTiming.Value,
+    "New configurations hold off the game's frame limit in VR and leave timing logs off.");
+Check(!first.Performance.ShareShadows.Value,
+    "New configurations leave experimental shadow sharing off.");
 
 Check(first.SeatClearanceEnabled.Value, "Head clearance is enabled by default for new settings.");
 Check(first.SeatClearanceRadius.Value == .25f, "Head clearance starts at a 25 cm radius.");
@@ -67,6 +71,8 @@ nextFile.Seed("Comfort", "Head Clearance", false);
 nextFile.Seed("Comfort", "Head Clearance Radius", .16f);
 nextFile.Seed("VR Performance", "Fixed Foveated Rendering", FixedFoveationLevel.Balanced);
 nextFile.Seed("VR Performance", "Eye Tracked Foveation", true);
+nextFile.Seed("VR Performance", "Hold Off Game Frame Limit", false);
+nextFile.Seed("VR Performance", "Share Shadows Between Eyes", true);
 nextFile.BeforeBind = _ => Check(ReferenceEquals(first, ModConfiguration.Current), "Successful replacement publishes only after its last bind.");
 var next = new ModConfiguration(nextFile);
 Check(ReferenceEquals(next, ModConfiguration.Instance), "A successful replacement becomes current.");
@@ -76,6 +82,8 @@ Check(next.FixedFoveation.RequestedLevel == FixedFoveationLevel.Balanced,
     "An explicit saved fixed-foveation preference survives configuration initialization.");
 Check(next.FixedFoveation.UseEyeTracking.Value && !first.FixedFoveation.UseEyeTracking.Value,
     "Saved eye tracking survives binding without changing the previous configuration object.");
+Check(!next.Performance.HoldOffFrameLimit.Value && next.Performance.ShareShadows.Value && first.Performance.HoldOffFrameLimit.Value,
+    "Saved frame-limit opt-out and shadow sharing opt-in survive configuration initialization.");
 Check(ReferenceEquals(firstFile, first.Config), "Replacing current settings does not mutate the previous object.");
 Check(firstFile.BindCount == nextFile.BindCount, "Every settings binding is still performed.");
 foreach (var savedRadius in new[] { .05f, .12f, .25f, .40f })
